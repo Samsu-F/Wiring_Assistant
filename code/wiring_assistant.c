@@ -10,17 +10,13 @@
 #define MAX_M 99            // 0 < m < 100
 #define MAX_S 999999999     // 0 < s < 1000000000
 
-typedef struct horizontal_cable {
-    uint32_t y;
-    uint32_t x1;    // x1 < x2
-    uint32_t x2;
-} horizontal_cable;
-
-typedef struct vertical_cable {
-    uint32_t x;
-    uint32_t y1;    // y1 < y2
-    uint32_t y2;
-} vertical_cable;
+typedef struct cable {
+    // for horizontal cables, shared is the y coordinate, min is the left x coordinate and max is the right coordinate
+    // analogous for vertical cables, shared=x, min=y1, max=y2
+    uint32_t shared;    // the shared coordinate of both end points
+    uint32_t min;       // min < max
+    uint32_t max;
+} cable;
 
 
 typedef struct graph {
@@ -32,9 +28,9 @@ typedef struct graph {
     bool bloom2_horizontal[BLOOM2_SIZE];    // bloom filter 2 for horizontal cables
     bool bloom2_vertical[BLOOM2_SIZE];      // bloom filter 2 for vertical cables
     uint m_horizontal;                      // the number of horizontal cables
-    horizontal_cable horizontal_cables[MAX_M]; // sorted by their y coordinate
+    cable horizontal_cables[MAX_M];         // array of horizontal cables, sorted by their y coordinate
     uint m_vertical;                        // the number of vertical cables
-    vertical_cable vertical_cables[MAX_M];     // sorted by their x coordinate
+    cable* vertical_cables;                 // array of vertical cables, sorted by their x coordinate
 } graph;
 
 
@@ -51,16 +47,15 @@ inline uint hash_bloom2(uint32_t key)
 
 int compare_cables(const void* a, const void* b)
 {
-    // TODO: using for horizontal cables is technically undefined behavior, although it is very unlikely to go wrong
-    vertical_cable* cable_a = (vertical_cable*)a;
-    vertical_cable* cable_b = (vertical_cable*)b;
-    if(cable_a->x < cable_b->x) {
+    cable* cable_a = (cable*)a;
+    cable* cable_b = (cable*)b;
+    if(cable_a->shared < cable_b->shared) {
         return -1;
-    } else if(cable_a->x > cable_b->x) {
+    } else if(cable_a->shared > cable_b->shared) {
         return 1;
     } else {
-        assert((cable_a->y2 <= cable_b->y1) || (cable_b->y2 <= cable_a->y1)); // assert they do not overlap
-        if(cable_a->y1 < cable_b->y1) {
+        assert((cable_a->max <= cable_b->min) || (cable_b->max <= cable_a->min)); // assert they do not overlap
+        if(cable_a->min < cable_b->min) {
             return -1;
         }
         return 1;
@@ -72,16 +67,18 @@ void insert_cable(graph* const g, const uint x1, const uint y1, const uint x2, c
 {
     if(x1 == x2) {  // vertical cable
         assert(y1 < y2);
-        g->vertical_cables[g->m_horizontal].x = x1;
-        g->vertical_cables[g->m_horizontal].y1 = y1;
-        g->vertical_cables[g->m_horizontal].y2 = y2;
-        g->m_horizontal++;
+        g->horizontal_cables[g->m_horizontal].shared = x1;
+        g->horizontal_cables[g->m_horizontal].min = y1;
+        g->horizontal_cables[g->m_horizontal].max = y2;
+        g->m_horizontal++;      // increment the counter
     } else {        // horizontal cable
         assert(y1 == y2 && x1 < x2);
-        g->horizontal_cables[g->m_vertical].y = y1;
-        g->horizontal_cables[g->m_vertical].x1 = x1;
-        g->horizontal_cables[g->m_vertical].x2 = x2;
-        g->m_vertical++;
+        g->m_vertical++;        // increment the counter
+        // extend the array by one to the negative direction, taking space from g->horizontal_cables
+        g->vertical_cables--;
+        g->vertical_cables[0].shared = y1;
+        g->vertical_cables[0].min = x1;
+        g->vertical_cables[0].max = x2;
     }
 }
 
@@ -95,12 +92,12 @@ void init_bloom_filters(graph* const g)
     memset(g->bloom2_vertical, false, BLOOM2_SIZE * sizeof(bool));
 
     for(uint i = 0; i < g->m_horizontal; i++) {
-        uint32_t key = g->horizontal_cables[i].y;
+        uint32_t key = g->horizontal_cables[i].shared;
         g->bloom1_horizontal[hash_bloom1(key)] = true;
         g->bloom2_horizontal[hash_bloom2(key)] = true;
     }
     for(uint i = 0; i < g->m_vertical; i++) {
-        uint32_t key = g->vertical_cables[i].x;
+        uint32_t key = g->vertical_cables[i].shared;
         g->bloom1_vertical[hash_bloom1(key)] = true;
         g->bloom2_vertical[hash_bloom2(key)] = true;
     }
@@ -118,6 +115,7 @@ graph* parse_instance()
     }
     g->m_horizontal = 0;
     g->m_vertical = 0;
+    g->vertical_cables = &(g->horizontal_cables[MAX_M]);
 
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
     scanf("%u %u\n", &(g->m), &(g->s));
@@ -131,15 +129,15 @@ graph* parse_instance()
         insert_cable(g, x1, y1, x2, y2);
     }
     // sort cables and init bloom filters
-    qsort(g->horizontal_cables, g->m_horizontal, sizeof(horizontal_cable), compare_cables);
-    qsort(g->vertical_cables, g->m_vertical, sizeof(vertical_cable), compare_cables);
+    qsort(g->horizontal_cables, g->m_horizontal, sizeof(cable), compare_cables);
+    qsort(g->vertical_cables, g->m_vertical, sizeof(cable), compare_cables);
     init_bloom_filters(g);
 
 
     // read third line. Semantics: p1_x p1_y p2_x p2_y; Format ^[0-9]{1,9} [0-9]{1,9} [0-9]{1,9} [0-9]{1,9}$
     scanf("%u %u %u %u", &(g->p1x), &(g->p1y), &(g->p2x), &(g->p2y));
 
-    /* DEBUG*/ fprintf(stderr, "HORIZONTAL:\n"); for(uint i = 0; i < g->m_horizontal; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->horizontal_cables[i].x1, g->horizontal_cables[i].y, g->horizontal_cables[i].x2, g->horizontal_cables[i].y);} fprintf(stderr, "VERTICAL:\n");for(uint i = 0; i < g->m_vertical; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->vertical_cables[i].x, g->vertical_cables[i].y1, g->vertical_cables[i].x, g->vertical_cables[i].y2);}
+    /* DEBUG*/ fprintf(stderr, "HORIZONTAL:\n"); for(uint i = 0; i < g->m_horizontal; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->horizontal_cables[i].min, g->horizontal_cables[i].shared, g->horizontal_cables[i].max, g->horizontal_cables[i].shared);} fprintf(stderr, "VERTICAL:\n");for(uint i = 0; i < g->m_vertical; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->vertical_cables[i].shared, g->vertical_cables[i].min, g->vertical_cables[i].shared, g->vertical_cables[i].max);}
     return g;
 }
 
