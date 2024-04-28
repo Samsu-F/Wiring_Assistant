@@ -105,7 +105,7 @@ void init_bloom_filters(graph* const g)
 
 
 // parse stdin and create the graph struct.
-// exits immediately if there is no next problem instance // TODO: is this reasonable?
+// returns a graph with s==0 iff there is no next problem instance
 graph* parse_instance()
 {
     graph* const g = malloc(sizeof(graph));
@@ -120,7 +120,7 @@ graph* parse_instance()
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
     scanf("%u %u\n", &(g->m), &(g->s));
     fprintf(stderr, "\nDEBUG:\tM = %u; S = %u\n", g->m, g->s); // DEBUG
-    if(!g->s) { exit(EXIT_SUCCESS); } // the line just parsed marks the end of the input // TODO: is this good style?
+    if(!g->s) { return g; } // the line just parsed marks the end of the input
 
     // read second line. Semantics: (x_left y_bottom x_right y_bottom)*M; Format [0-9]{1,9} 4M times
     for(uint i = 0; i < g->m; i++) {
@@ -132,7 +132,6 @@ graph* parse_instance()
     qsort(g->horizontal_cables, g->m_horizontal, sizeof(cable), compare_cables);
     qsort(g->vertical_cables, g->m_vertical, sizeof(cable), compare_cables);
     init_bloom_filters(g);
-
 
     // read third line. Semantics: p1_x p1_y p2_x p2_y; Format ^[0-9]{1,9} [0-9]{1,9} [0-9]{1,9} [0-9]{1,9}$
     scanf("%u %u %u %u", &(g->p1x), &(g->p1y), &(g->p2x), &(g->p2y));
@@ -146,6 +145,7 @@ int main()
 {
     while(true) {
         const graph* const g = parse_instance();
-        if(!g) { return EXIT_FAILURE; }
+        if(!g) { return EXIT_FAILURE; }     // although this should never occur, make sure g is not a nullpointer
+        if(!g->s) { return EXIT_SUCCESS; }  // end of input
     }
 }
