@@ -34,12 +34,12 @@ typedef struct graph {
 } graph;
 
 
-inline uint hash_bloom1(uint32_t key)
+inline uint hash_bloom1(const uint32_t key)
 {
     return key % BLOOM1_SIZE;
 }
 
-inline uint hash_bloom2(uint32_t key)
+inline uint hash_bloom2(const uint32_t key)
 {
     return key % BLOOM2_SIZE;
 }
@@ -67,18 +67,18 @@ void insert_cable(graph* const g, const uint x1, const uint y1, const uint x2, c
 {
     if(x1 == x2) {  // vertical cable
         assert(y1 < y2);
-        g->horizontal_cables[g->m_horizontal].shared = x1;
-        g->horizontal_cables[g->m_horizontal].min = y1;
-        g->horizontal_cables[g->m_horizontal].max = y2;
-        g->m_horizontal++;      // increment the counter
-    } else {        // horizontal cable
-        assert(y1 == y2 && x1 < x2);
-        g->m_vertical++;        // increment the counter
         // extend the array by one to the negative direction, taking space from g->horizontal_cables
         g->vertical_cables--;
-        g->vertical_cables[0].shared = y1;
-        g->vertical_cables[0].min = x1;
-        g->vertical_cables[0].max = x2;
+        g->vertical_cables[0].shared = x1;
+        g->vertical_cables[0].min = y1;
+        g->vertical_cables[0].max = y2;
+        g->m_vertical++;    // increment the counter
+    } else {        // horizontal cable
+        assert(y1 == y2 && x1 < x2);
+        g->horizontal_cables[g->m_horizontal].shared = y1;
+        g->horizontal_cables[g->m_horizontal].min = x1;
+        g->horizontal_cables[g->m_horizontal].max = x2;
+        g->m_horizontal++;  // increment the counter
     }
 }
 
@@ -105,22 +105,18 @@ void init_bloom_filters(graph* const g)
 
 
 // parse stdin and create the graph struct.
-// returns a graph with s==0 iff there is no next problem instance
-graph* parse_instance()
+// g: the destination where the parsed data will be saved
+// g.s will be 0 iff there is no next problem instance
+void parse_instance(graph* const g)
 {
-    graph* const g = malloc(sizeof(graph));
-    if(!g) {
-        fprintf(stderr, "Allocating %ld bytes for graph struct failed.\n", sizeof(graph));
-        return NULL;
-    }
     g->m_horizontal = 0;
     g->m_vertical = 0;
-    g->vertical_cables = &(g->horizontal_cables[MAX_M]);
 
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
     scanf("%u %u\n", &(g->m), &(g->s));
     fprintf(stderr, "\nDEBUG:\tM = %u; S = %u\n", g->m, g->s); // DEBUG
-    if(!g->s) { return g; } // the line just parsed marks the end of the input
+    if(!g->s) { return; }   // the line just parsed marks the end of the input
+    g->vertical_cables = &(g->horizontal_cables[g->m]);
 
     // read second line. Semantics: (x_left y_bottom x_right y_bottom)*M; Format [0-9]{1,9} 4M times
     for(uint i = 0; i < g->m; i++) {
@@ -137,15 +133,14 @@ graph* parse_instance()
     scanf("%u %u %u %u", &(g->p1x), &(g->p1y), &(g->p2x), &(g->p2y));
 
     /* DEBUG*/ fprintf(stderr, "HORIZONTAL:\n"); for(uint i = 0; i < g->m_horizontal; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->horizontal_cables[i].min, g->horizontal_cables[i].shared, g->horizontal_cables[i].max, g->horizontal_cables[i].shared);} fprintf(stderr, "VERTICAL:\n");for(uint i = 0; i < g->m_vertical; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->vertical_cables[i].shared, g->vertical_cables[i].min, g->vertical_cables[i].shared, g->vertical_cables[i].max);}
-    return g;
 }
 
 
 int main()
 {
     while(true) {
-        const graph* const g = parse_instance();
-        if(!g) { return EXIT_FAILURE; }     // although this should never occur, make sure g is not a nullpointer
-        if(!g->s) { return EXIT_SUCCESS; }  // end of input
+        graph g;
+        parse_instance(&g);
+        if(!g.s) { return EXIT_SUCCESS; }  // end of input
     }
 }
