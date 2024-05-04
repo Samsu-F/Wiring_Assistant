@@ -5,142 +5,211 @@
 #include <stdint.h>
 #include <assert.h>
 
-#define BLOOM1_SIZE 1019    // 1019 is prime
-#define BLOOM2_SIZE 1021    // 1021 is prime
-#define MAX_M 99            // 0 < m < 100
-#define MAX_S 999999999     // 0 < s < 1000000000
-
-typedef struct cable {
-    // for horizontal cables, shared is the y coordinate, min is the left x coordinate and max is the right coordinate
-    // analogous for vertical cables, shared=x, min=y1, max=y2
-    uint32_t shared;    // the shared coordinate of both end points
-    uint32_t min;       // min < max
-    uint32_t max;
-} cable;
 
 
-typedef struct graph {
-    uint m;     // number of existing cables, m <= 0 <= MAX_M
-    uint32_t s; // size (s = length = width)
-    uint32_t p1x, p1y, p2x, p2y;    // the points that have to be connected
-    bool bloom1_horizontal[BLOOM1_SIZE];    // bloom filter 1 for horizontal cables
-    bool bloom1_vertical[BLOOM1_SIZE];      // bloom filter 1 for vertical cables
-    bool bloom2_horizontal[BLOOM2_SIZE];    // bloom filter 2 for horizontal cables
-    bool bloom2_vertical[BLOOM2_SIZE];      // bloom filter 2 for vertical cables
-    uint m_horizontal;                      // the number of horizontal cables
-    cable horizontal_cables[MAX_M];         // array of horizontal cables, sorted by their y coordinate
-    uint m_vertical;                        // the number of vertical cables
-    cable* vertical_cables;                 // array of vertical cables, sorted by their x coordinate
-} graph;
+#define MAX_M 99        // 0 < m < 100
+#define MAX_S 999999999 // 0 < s < 1000000000
 
 
-inline uint hash_bloom1(const uint32_t key)
+
+typedef struct Wire {
+    long x1;
+    long y1;
+    long x2;
+    long y2;
+} Wire;
+
+
+
+typedef struct RawData {
+    int m;       // number of wires
+    long width;  // number of nodes in the x direction
+    long height; // number of nodes in the y direction
+    long p1x;    // coordinates of the start and end points
+    long p1y;
+    long p2x;
+    long p2y;
+    Wire* wires; // the given wire coordinates
+} RawData;
+
+
+
+// Comparison function for qsort
+int compare_long(const void* a, const void* b)
 {
-    return key % BLOOM1_SIZE;
+    long x = *((long*)a);
+    long y = *((long*)b);
+    return (x > y) - (x < y);
 }
 
-inline uint hash_bloom2(const uint32_t key)
-{
-    return key % BLOOM2_SIZE;
-}
 
 
-int compare_cables(const void* a, const void* b)
+void debug_print_raw_data(RawData* const rd)
 {
-    cable* cable_a = (cable*)a;
-    cable* cable_b = (cable*)b;
-    if(cable_a->shared < cable_b->shared) {
-        return -1;
-    } else if(cable_a->shared > cable_b->shared) {
-        return 1;
-    } else {
-        assert((cable_a->max <= cable_b->min) || (cable_b->max <= cable_a->min)); // assert they do not overlap
-        if(cable_a->min < cable_b->min) {
-            return -1;
-        }
-        return 1;
+    fprintf(stderr, "DEBUG: raw data\n");
+    fprintf(stderr, "\tm = %d\n\twidth = %lu\n\theight = %lu\n", rd->m, rd->width, rd->height);
+    fprintf(stderr, "\tp1 = (%lu, %lu)\n\tp2 = (%lu, %lu)\n", rd->p1x, rd->p1y, rd->p2x, rd->p2y);
+
+    fprintf(stderr, "\tCABLES:\n");
+    for(int i = 0; i < rd->m; i++) {
+        Wire w = rd->wires[i];
+        fprintf(stderr, "\t\t(%lu, %lu) <-> (%lu, %lu)\n", w.x1, w.y1, w.x2, w.y2);
     }
 }
 
 
-void insert_cable(graph* const g, const uint x1, const uint y1, const uint x2, const uint y2)
+
+// TODO: explanation
+void read_raw_data(RawData* const rd)
 {
-    if(x1 == x2) {  // vertical cable
-        assert(y1 < y2);
-        // extend the array by one to the negative direction, taking space from g->horizontal_cables
-        g->vertical_cables--;
-        g->vertical_cables[0].shared = x1;
-        g->vertical_cables[0].min = y1;
-        g->vertical_cables[0].max = y2;
-        g->m_vertical++;    // increment the counter
-    } else {        // horizontal cable
-        assert(y1 == y2 && x1 < x2);
-        g->horizontal_cables[g->m_horizontal].shared = y1;
-        g->horizontal_cables[g->m_horizontal].min = x1;
-        g->horizontal_cables[g->m_horizontal].max = x2;
-        g->m_horizontal++;  // increment the counter
-    }
-}
-
-
-void init_bloom_filters(graph* const g)
-{
-    // content of bloom filters is undefined, so clear the bloom filters first
-    memset(g->bloom1_horizontal, false, BLOOM1_SIZE * sizeof(bool));
-    memset(g->bloom2_horizontal, false, BLOOM2_SIZE * sizeof(bool));
-    memset(g->bloom1_vertical, false, BLOOM1_SIZE * sizeof(bool));
-    memset(g->bloom2_vertical, false, BLOOM2_SIZE * sizeof(bool));
-
-    for(uint i = 0; i < g->m_horizontal; i++) {
-        uint32_t key = g->horizontal_cables[i].shared;
-        g->bloom1_horizontal[hash_bloom1(key)] = true;
-        g->bloom2_horizontal[hash_bloom2(key)] = true;
-    }
-    for(uint i = 0; i < g->m_vertical; i++) {
-        uint32_t key = g->vertical_cables[i].shared;
-        g->bloom1_vertical[hash_bloom1(key)] = true;
-        g->bloom2_vertical[hash_bloom2(key)] = true;
-    }
-}
-
-
-// parse stdin and create the graph struct.
-// g: the destination where the parsed data will be saved
-// g.s will be 0 iff there is no next problem instance
-void parse_instance(graph* const g)
-{
-    g->m_horizontal = 0;
-    g->m_vertical = 0;
-
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
-    scanf("%u %u\n", &(g->m), &(g->s));
-    fprintf(stderr, "\nDEBUG:\tM = %u; S = %u\n", g->m, g->s); // DEBUG
-    if(!g->s) { return; }   // the line just parsed marks the end of the input
-    g->vertical_cables = &(g->horizontal_cables[g->m]);
-
-    // read second line. Semantics: (x_left y_bottom x_right y_bottom)*M; Format [0-9]{1,9} 4M times
-    for(uint i = 0; i < g->m; i++) {
-        uint x1, y1, x2, y2;
-        scanf("%u %u %u %u", &x1, &y1, &x2, &y2);
-        insert_cable(g, x1, y1, x2, y2);
+    scanf("%d %lu", &(rd->m), &(rd->width));
+    rd->height = rd->width;
+    if(rd->width == 0) { // if the line just parsed marks the end of the input
+        // ensure there is no random data there which might be falsely interpretet as a pointer
+        rd->wires = NULL;
+        return;
     }
-    // sort cables and init bloom filters
-    qsort(g->horizontal_cables, g->m_horizontal, sizeof(cable), compare_cables);
-    qsort(g->vertical_cables, g->m_vertical, sizeof(cable), compare_cables);
-    init_bloom_filters(g);
+    rd->wires = malloc(rd->m * sizeof(Wire)); // TODO: is this a good idea?
+    if(!rd->wires) {
+        fprintf(stderr, "Allocating %ld bytes for RawData struct failed.\n", rd->m * sizeof(Wire));
+        exit(EXIT_FAILURE);
+    }
+
+    // read second line. Semantics: (x_left y_bottom x_right y_bottom)*M; Format[0-9]{1,9} 4M times
+    for(int i = 0; i < rd->m; i++) {
+        long x1, y1, x2, y2;
+        scanf("%lu %lu %lu %lu", &x1, &y1, &x2, &y2);
+        rd->wires[i].x1 = x1;
+        rd->wires[i].y1 = y1;
+        rd->wires[i].x2 = x2;
+        rd->wires[i].y2 = y2;
+    }
 
     // read third line. Semantics: p1_x p1_y p2_x p2_y; Format ^[0-9]{1,9} [0-9]{1,9} [0-9]{1,9} [0-9]{1,9}$
-    scanf("%u %u %u %u", &(g->p1x), &(g->p1y), &(g->p2x), &(g->p2y));
-
-    /* DEBUG*/ fprintf(stderr, "HORIZONTAL:\n"); for(uint i = 0; i < g->m_horizontal; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->horizontal_cables[i].min, g->horizontal_cables[i].shared, g->horizontal_cables[i].max, g->horizontal_cables[i].shared);} fprintf(stderr, "VERTICAL:\n");for(uint i = 0; i < g->m_vertical; i++){ fprintf(stderr, "\t(%u, %u) (%u, %u)\n", g->vertical_cables[i].shared, g->vertical_cables[i].min, g->vertical_cables[i].shared, g->vertical_cables[i].max);}
+    scanf("%lu %lu %lu %lu", &(rd->p1x), &(rd->p1y), &(rd->p2x), &(rd->p2y));
 }
 
 
+
+// helper function for simplify
+// subtract shift from all x-coordinates of wire end points if >= min_to_move
+void simplify_x_shift(RawData* const rd, const long shift, const long min_to_move)
+{
+    assert(shift > 0);
+    rd->width -= shift;
+    for(int i = 0; i < rd->m; i++) {
+        if(rd->wires[i].x2 >= min_to_move) {
+            rd->wires[i].x2 -= shift;
+            // nested because x1 <= x2, so if x2 < min_to_move, then x1 will also be < min_to_move
+            if(rd->wires[i].x1 >= min_to_move) {
+                rd->wires[i].x1 -= shift;
+            }
+        }
+    }
+    if(rd->p1x >= min_to_move) {
+        rd->p1x -= shift;
+    }
+    if(rd->p2x >= min_to_move) {
+        rd->p2x -= shift;
+    }
+}
+// analogous for y
+// TODO: refactor and find a better way without repetition
+void simplify_y_shift(RawData* const rd, const long shift, const long min_to_move)
+{
+    assert(shift > 0);
+    rd->height -= shift;
+    for(int i = 0; i < rd->m; i++) {
+        if(rd->wires[i].y2 >= min_to_move) {
+            rd->wires[i].y2 -= shift;
+            if(rd->wires[i].y1 >= min_to_move) {
+                rd->wires[i].y1 -= shift;
+            }
+        }
+    }
+    if(rd->p1y >= min_to_move) {
+        rd->p1y -= shift;
+    }
+    if(rd->p2y >= min_to_move) {
+        rd->p2y -= shift;
+    }
+}
+
+
+
+// TODO: explanation
+// TODO: refactor
+void simplify(RawData* const rd)
+{
+    assert(rd->m > 0 && rd->wires != NULL);
+    size_t n = 2 * rd->m + 3; // the number of coordinates per direction
+
+    long xs[n]; // worst case size for these two VLAs is 1608 bytes each,
+    long ys[n]; // assuming sizeof(long) = 8. So unless ran on a very limited embedded system,
+                // the max stack size will definitely not be a problem.
+    for(int i = 0; i < rd->m; i++) {
+        xs[2 * i] = rd->wires[i].x1;
+        ys[2 * i] = rd->wires[i].y1;
+        xs[2 * i + 1] = rd->wires[i].x2;
+        ys[2 * i + 1] = rd->wires[i].y2;
+    }
+    xs[n - 3] = rd->width;
+    ys[n - 3] = rd->height;
+    xs[n - 2] = rd->p1x;
+    ys[n - 2] = rd->p1y;
+    xs[n - 1] = rd->p2x;
+    ys[n - 1] = rd->p2y;
+    qsort(&xs, n, sizeof(long), compare_long);
+    qsort(&ys, n, sizeof(long), compare_long);
+
+    long prev = -1; // the coordinate of the closest left to it (the previous in this sorted array)
+    long sum_shifts = 0; // to avoid having to update the rest of this sorted array each time,
+                         // keep track of all the shifts so for
+    for(size_t i = 0; i < n; i++) {
+        xs[i] -= sum_shifts;
+        long diff = xs[i] - prev;
+        if(diff >= 3) {
+            simplify_x_shift(rd, diff - 2, xs[i]);
+        }
+        prev = xs[i];
+    }
+    // now the same for y
+    prev = -1;
+    sum_shifts = 0;
+    for(size_t i = 0; i < n; i++) {
+        ys[i] -= sum_shifts;
+        long diff = ys[i] - prev;
+        if(diff >= 3) {
+            simplify_y_shift(rd, diff - 2, ys[i]);
+        }
+        prev = ys[i];
+    }
+
+    //////// DEBUG /////////////
+    debug_print_raw_data(rd);
+}
+
+
+
+// TODO: explanation
 int main()
 {
     while(true) {
-        graph g;
-        parse_instance(&g);
-        if(!g.s) { return EXIT_SUCCESS; }  // end of input
+        RawData raw_data;
+        read_raw_data(&raw_data);
+        if(raw_data.width == 0) {
+            return EXIT_SUCCESS; // end of input was reached
+        }
+        simplify(&raw_data);
+
+        // TODO: transform the raw data into a data structure on which the pathfinding algorithm
+        //       can work efficiently
+
+        // TODO: find path
+
+        // TODO: print result
+
+        free(raw_data.wires);
     }
 }
