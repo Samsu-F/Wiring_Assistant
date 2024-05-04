@@ -47,13 +47,13 @@ int compare_long(const void* a, const void* b)
 void debug_print_raw_data(RawData* const rd)
 {
     fprintf(stderr, "DEBUG: raw data\n");
-    fprintf(stderr, "\tm = %d\n\twidth = %lu\n\theight = %lu\n", rd->m, rd->width, rd->height);
-    fprintf(stderr, "\tp1 = (%lu, %lu)\n\tp2 = (%lu, %lu)\n", rd->p1x, rd->p1y, rd->p2x, rd->p2y);
+    fprintf(stderr, "\tm = %d\n\twidth = %ld\n\theight = %ld\n", rd->m, rd->width, rd->height);
+    fprintf(stderr, "\tp1 = (%ld, %ld)\n\tp2 = (%ld, %ld)\n", rd->p1x, rd->p1y, rd->p2x, rd->p2y);
 
     fprintf(stderr, "\tCABLES:\n");
     for(int i = 0; i < rd->m; i++) {
         Wire w = rd->wires[i];
-        fprintf(stderr, "\t\t(%lu, %lu) <-> (%lu, %lu)\n", w.x1, w.y1, w.x2, w.y2);
+        fprintf(stderr, "\t\t(%ld, %ld) <-> (%ld, %ld)\n", w.x1, w.y1, w.x2, w.y2);
     }
 }
 
@@ -63,7 +63,7 @@ void debug_print_raw_data(RawData* const rd)
 void read_raw_data(RawData* const rd)
 {
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
-    scanf("%d %lu", &(rd->m), &(rd->width));
+    scanf("%d %ld", &(rd->m), &(rd->width));
     rd->height = rd->width;
     if(rd->width == 0) { // if the line just parsed marks the end of the input
         // ensure there is no random data there which might be falsely interpretet as a pointer
@@ -72,14 +72,14 @@ void read_raw_data(RawData* const rd)
     }
     rd->wires = malloc(rd->m * sizeof(Wire)); // TODO: is this a good idea?
     if(!rd->wires) {
-        fprintf(stderr, "Allocating %ld bytes for RawData struct failed.\n", rd->m * sizeof(Wire));
+        fprintf(stderr, "Allocating %lu bytes for RawData struct failed.\n", rd->m * sizeof(Wire));
         exit(EXIT_FAILURE);
     }
 
     // read second line. Semantics: (x_left y_bottom x_right y_bottom)*M; Format[0-9]{1,9} 4M times
     for(int i = 0; i < rd->m; i++) {
         long x1, y1, x2, y2;
-        scanf("%lu %lu %lu %lu", &x1, &y1, &x2, &y2);
+        scanf("%ld %ld %ld %ld", &x1, &y1, &x2, &y2);
         rd->wires[i].x1 = x1;
         rd->wires[i].y1 = y1;
         rd->wires[i].x2 = x2;
@@ -87,7 +87,7 @@ void read_raw_data(RawData* const rd)
     }
 
     // read third line. Semantics: p1_x p1_y p2_x p2_y; Format ^[0-9]{1,9} [0-9]{1,9} [0-9]{1,9} [0-9]{1,9}$
-    scanf("%lu %lu %lu %lu", &(rd->p1x), &(rd->p1y), &(rd->p2x), &(rd->p2y));
+    scanf("%ld %ld %ld %ld", &(rd->p1x), &(rd->p1y), &(rd->p2x), &(rd->p2y));
 }
 
 
