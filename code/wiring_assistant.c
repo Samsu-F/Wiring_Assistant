@@ -34,16 +34,33 @@ typedef struct RawData {
 
 
 
+typedef struct Graph {
+    long p1x; // coordinates of the start and end points
+    long p1y;
+    long p2x;
+    long p2y;
+    uint8_t** node_cost;
+    uint8_t** neighbors;
+} Graph;
+
+const uint8_t NEIGH_X_POS = 0x01;
+const uint8_t NEIGH_X_NEG = 0x02;
+const uint8_t NEIGH_Y_POS = 0x04;
+const uint8_t NEIGH_Y_NEG = 0x08;
+
+
+
 // Comparison function for qsort
 int compare_long(const void* a, const void* b)
 {
-    long x = *((long*)a);
-    long y = *((long*)b);
+    const long x = *((const long*)a);
+    const long y = *((const long*)b);
     return (x > y) - (x < y);
 }
 
 
 
+// TODO: remove?
 void debug_print_raw_data(RawData* const rd)
 {
     fprintf(stderr, "DEBUG: raw data\n");
@@ -72,7 +89,7 @@ void read_raw_data(RawData* const rd)
     }
     rd->wires = malloc(rd->m * sizeof(Wire)); // TODO: is this a good idea?
     if(!rd->wires) {
-        fprintf(stderr, "Allocating %lu bytes for RawData struct failed.\n", rd->m * sizeof(Wire));
+        fprintf(stderr, "Allocating %lu bytes for RawData wires array failed.\n", rd->m * sizeof(Wire));
         exit(EXIT_FAILURE);
     }
 
@@ -196,14 +213,120 @@ void simplify(RawData* const rd)
         prev = ys[i];
     }
 
-    //////// DEBUG /////////////
+    //////// DEBUG //////// TODO: remove
     debug_print_raw_data(rd);
 }
 
 
 
+// helper function for build_graph
+// it should probably not be called from anywhere else
+void graph_malloc(Graph* const g, const RawData* const rd)
+{
+    g->neighbors = malloc(rd->width * sizeof(uint8_t*));
+    if(!g->neighbors) {
+        fprintf(stderr, "Allocating %lu bytes for Graph neighbors array of arrays failed.\n",
+                rd->width * sizeof(uint8_t*));
+        exit(EXIT_FAILURE);
+    }
+    g->neighbors[0] = malloc(rd->width * rd->height * sizeof(uint8_t));
+    if(!g->neighbors[0]) {
+        fprintf(stderr, "Allocating %lu bytes for Graph neighbors failed.\n",
+                rd->width * rd->height * sizeof(uint8_t));
+        exit(EXIT_FAILURE);
+    }
+    g->node_cost = malloc(rd->width * sizeof(uint8_t*));
+    if(!g->node_cost) {
+        fprintf(stderr, "Allocating %lu bytes for Graph node_cost array of arrays failed.\n",
+                rd->width * sizeof(uint8_t*));
+        exit(EXIT_FAILURE);
+    }
+    g->node_cost[0] = malloc(rd->width * rd->height * sizeof(uint8_t));
+    if(!g->node_cost[0]) {
+        fprintf(stderr, "Allocating %lu bytes for Graph node_cost failed.\n",
+                rd->width * rd->height * sizeof(uint8_t));
+        exit(EXIT_FAILURE);
+    }
+    for(int x = 1; x < rd->width; x++) {
+        g->neighbors[x] = g->neighbors[0] + (x * rd->height);
+        g->node_cost[x] = g->node_cost[0] + (x * rd->height);
+    }
+}
+
+
+
+// free everything inside the Graph struct
+void graph_free(Graph* const g)
+{
+    free(g->neighbors[0]);
+    free(g->node_cost[0]);
+    free(g->neighbors);
+    g->neighbors = NULL;
+    free(g->node_cost);
+    g->node_cost = NULL;
+}
+
+
+
+// The pointers stored in g will be overwritten, so calling graph_free(g) before calling
+// build_graph to overwrite an existing graph will be necessary in most cases to avoid a memory leak.
+// Must not be called on a RawData struct without simplifying it first with simplify(rd)
+void build_graph(Graph* const g, const RawData* const rd)
+{
+    graph_malloc(g, rd);
+    g->p1x = rd->p1x;
+    g->p1y = rd->p1y;
+    g->p2x = rd->p2x;
+    g->p2y = rd->p2y;
+    memset(g->node_cost[0], 0, rd->width * rd->height); // by default nodes have a cost of 0
+
+    uint8_t bitmask_all_neighbors = NEIGH_X_NEG | NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS;
+    memset(g->neighbors[0], bitmask_all_neighbors, rd->width * rd->height);
+    // now every node is marked as having all four neighbors. Remove neighbors where this does not apply
+    memset(g->neighbors[0], NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS, rd->height);
+    memset(g->neighbors[rd->width - 1], NEIGH_X_NEG | NEIGH_Y_NEG | NEIGH_Y_POS, rd->height);
+    for(long x = 0; x < rd->width; x++) {
+        g->neighbors[x][0] &= ~NEIGH_Y_NEG; // unset bit indicating neighbor in negative y direction
+        g->neighbors[x][rd->height - 1] &= ~NEIGH_Y_POS;
+    }
+    for(int i = 0; i < rd->m; i++) {             // for each wire in rd
+        if(rd->wires[i].y1 == rd->wires[i].y2) { // horizontal wire in x direction
+            long x1 = rd->wires[i].x1;
+            long x2 = rd->wires[i].x2;
+            long y = rd->wires[i].y1;
+            assert(x1 < x2);
+            g->neighbors[x1][y] &= ~NEIGH_X_POS; // no neighbor in positive x direction
+            g->node_cost[x1][y] += 1;            // increase cost
+            for(long x = x1 + 1; x < x2; x++) {
+                g->neighbors[x][y] &= ~(NEIGH_X_NEG | NEIGH_X_POS); // no neighbor in +- x direction
+                g->node_cost[x][y] += 1;                            // increase cost
+            }
+            g->neighbors[x2][y] &= ~NEIGH_X_NEG; // no neighbor in positive x direction
+            g->node_cost[x2][y] += 1;            // increase cost
+        }
+        // TODO: refactor and find better way to do this without repetition
+        else { // vertical wire in y direction. Basically the same procedure as for horizontal wires
+            assert(rd->wires[i].x1 == rd->wires[i].x2);
+            long y1 = rd->wires[i].y1;
+            long y2 = rd->wires[i].y2;
+            long x = rd->wires[i].x1;
+            assert(y1 < y2);
+            g->neighbors[x][y1] &= ~NEIGH_Y_POS;
+            g->node_cost[x][y1] += 1;
+            for(long y = y1 + 1; y < y2; y++) {
+                g->neighbors[x][y] &= ~(NEIGH_Y_NEG | NEIGH_Y_POS);
+                g->node_cost[x][y] += 1;
+            }
+            g->neighbors[x][y2] &= ~NEIGH_Y_NEG;
+            g->node_cost[x][y2] += 1;
+        }
+    }
+}
+
+
+
 // TODO: explanation
-int main()
+int main(void)
 {
     while(true) {
         RawData raw_data;
@@ -211,15 +334,17 @@ int main()
         if(raw_data.width == 0) {
             return EXIT_SUCCESS; // end of input was reached
         }
+
         simplify(&raw_data);
 
-        // TODO: transform the raw data into a data structure on which the pathfinding algorithm
-        //       can work efficiently
+        Graph graph;
+        build_graph(&graph, &raw_data);
 
         // TODO: find path
 
         // TODO: print result
 
         free(raw_data.wires);
+        graph_free(&graph);
     }
 }
