@@ -138,11 +138,15 @@ void simplify_y_shift(RawData* const rd, const long shift, const long min_to_mov
 
 
 
-// TODO: explanation
 // TODO: refactor
+// Simplify the grid by removing identical neighboring columns/rows.
+// For number of existing wires m, after this function both the width and the height of the grid are
+// guaranteed to be equal to or less than 2*m+5. Since there can only be at most 3 unique
+// coordinates per cable, their sum is guaranteed to be <= 2*(2*m+5)-m = 3*m+10.
+// Therefore, their product (= total number of nodes) is <= ((3*m+10)/2)^2 = (1.5*m+5)^2
 void simplify(RawData* const rd)
 {
-    assert(rd->m > 0 && rd->wires != NULL);
+    assert(rd != NULL && rd->m > 0 && rd->wires != NULL);
     size_t n = 2 * rd->m + 3; // the number of coordinates per direction
 
     long xs[n]; // worst case size for these two VLAs is 1608 bytes each,
@@ -170,7 +174,10 @@ void simplify(RawData* const rd)
         xs[i] -= sum_shifts;
         long diff = xs[i] - prev;
         if(diff >= 3) {
-            simplify_x_shift(rd, diff - 2, xs[i]);
+            long shift = diff - 2;
+            simplify_x_shift(rd, shift, xs[i]);
+            sum_shifts += shift;
+            xs[i] -= shift;
         }
         prev = xs[i];
     }
@@ -181,7 +188,10 @@ void simplify(RawData* const rd)
         ys[i] -= sum_shifts;
         long diff = ys[i] - prev;
         if(diff >= 3) {
-            simplify_y_shift(rd, diff - 2, ys[i]);
+            long shift = diff - 2;
+            simplify_y_shift(rd, shift, ys[i]);
+            sum_shifts += shift;
+            ys[i] -= shift;
         }
         prev = ys[i];
     }
