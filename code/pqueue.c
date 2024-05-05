@@ -1,5 +1,5 @@
 /*
- * Min-heap implementation of a priority queue
+ * Array based heap implementation of a priority queue
  */
 
 
@@ -17,7 +17,9 @@ struct PQueue {
     KeyValPair* nodes;
     size_t n;
     size_t allocated_n;
+    PQKeyCompareFunc keycmp;
 };
+
 
 
 // must not be called on the root node
@@ -92,22 +94,22 @@ static void _pq_heapify_node(PQueue* q, size_t node)
         return;
     }
     else if(rchild >= q->n) { // if only the left child exists
-        if(q->nodes[lchild].key < q->nodes[node].key) {
+        if(q->keycmp(q->nodes[lchild].key, q->nodes[node].key)) {
             _pq_swap(q, node, lchild);
             _pq_heapify_node(q, lchild);
         }
         return;
     }
     // at this point, both child nodes exist
-    else if(q->nodes[lchild].key < q->nodes[rchild].key) {
-        if(q->nodes[lchild].key < q->nodes[node].key) {
+    else if(q->keycmp(q->nodes[lchild].key, q->nodes[rchild].key)) {
+        if(q->keycmp(q->nodes[lchild].key, q->nodes[node].key)) {
             _pq_swap(q, node, lchild);
             _pq_heapify_node(q, lchild);
             return;
         }
     }
     else { // rchild's key <= lchild's key
-        if(q->nodes[rchild].key < q->nodes[node].key) {
+        if(q->keycmp(q->nodes[rchild].key, q->nodes[node].key)) {
             _pq_swap(q, node, rchild);
             _pq_heapify_node(q, rchild);
             return;
@@ -117,12 +119,13 @@ static void _pq_heapify_node(PQueue* q, size_t node)
 
 
 
-PQueue* pq_allocate(void)
+PQueue* pq_new(PQKeyCompareFunc compare)
 {
     PQueue* q = malloc(sizeof(PQueue));
     if(!q) {
         return NULL;
     }
+    q->keycmp = compare;
     q->nodes = malloc(PQ_INIT_SIZE * sizeof(KeyValPair));
     if(!q->nodes) {
         free(q);
@@ -159,7 +162,7 @@ void pq_insert(PQueue* q, const KeyValPair new)
     size_t idx_new = q->n;
     q->n++;
     q->nodes[idx_new] = new;
-    while(idx_new != 0 && new.key < q->nodes[_pq_parent(idx_new)].key) {
+    while(idx_new != 0 && q->keycmp(new.key, q->nodes[_pq_parent(idx_new)].key)) {
         size_t idx_parent = _pq_parent(idx_new);
         _pq_swap(q, idx_new, idx_parent);
         idx_new = idx_parent;
@@ -169,7 +172,7 @@ void pq_insert(PQueue* q, const KeyValPair new)
 
 
 // must not be called on an empty PQueue
-KeyValPair pq_peek_min(const PQueue* q)
+KeyValPair pq_peek(const PQueue* q)
 {
     return q->nodes[0];
 }
@@ -177,7 +180,7 @@ KeyValPair pq_peek_min(const PQueue* q)
 
 
 // must not be called on an empty PQueue
-KeyValPair pq_pop_min(PQueue* q)
+KeyValPair pq_pop(PQueue* q)
 {
     KeyValPair result = q->nodes[0];
     q->n--;
