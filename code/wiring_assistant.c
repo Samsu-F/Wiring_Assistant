@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include "pqueue.h"
+
 
 
 #define MAX_M 99        // 0 < m < 100
@@ -223,6 +225,7 @@ void simplify(RawData* const rd)
 // it should probably not be called from anywhere else
 void graph_malloc(Graph* const g, const RawData* const rd)
 {
+    // of you change anything here, you may also need to adapt the function graph_free
     g->neighbors = malloc(rd->width * sizeof(uint8_t*));
     if(!g->neighbors) {
         fprintf(stderr, "Allocating %lu bytes for Graph neighbors array of arrays failed.\n",
@@ -321,6 +324,16 @@ void build_graph(Graph* const g, const RawData* const rd)
             g->node_cost[x][y2] += 1;
         }
     }
+}
+
+
+
+// calculate the minimal cost possible for a path between p1 and p2, where the cost of a path is
+// defined as the sum of the node costs of all the nodes in the path, including start and end
+int minimal_cost(const Graph* const g)
+// A* search algorithm without recontructing the path or keeping track of the predecessor node
+{
+    exit(42);
 }
 
 
