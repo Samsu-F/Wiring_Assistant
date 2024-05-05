@@ -5,12 +5,29 @@
 #include <stdint.h>
 #include <assert.h>
 
+
+
+typedef struct PathCost {
+    uint8_t intersections;
+    uint16_t length;
+} PathCost;
+
+typedef struct Uint16Point {
+    uint16_t x;
+    uint16_t y;
+} Uint16Point;
+
+#define PQ_KEY_TYPE PathCost
+#define PQ_VAL_TYPE Uint16Point
 #include "pqueue.h"
 
 
 
 #define MAX_M 99        // 0 < m < 100
 #define MAX_S 999999999 // 0 < s < 1000000000
+
+#define PRINT_DEBUG  false
+#define PRINT_GRAPHS false
 
 
 
@@ -37,10 +54,10 @@ typedef struct RawData {
 
 
 typedef struct Graph {
-    long p1x; // coordinates of the start and end points
-    long p1y;
-    long p2x;
-    long p2y;
+    uint16_t width;
+    uint16_t height;
+    Uint16Point p1; // coordinates of the start and end points
+    Uint16Point p2;
     uint8_t** node_cost;
     uint8_t** neighbors;
 } Graph;
@@ -49,6 +66,10 @@ const uint8_t NEIGH_X_POS = 0x01;
 const uint8_t NEIGH_X_NEG = 0x02;
 const uint8_t NEIGH_Y_POS = 0x04;
 const uint8_t NEIGH_Y_NEG = 0x08;
+
+
+
+typedef uint16_t (*HeuristicFunc)(const Uint16Point p, const Uint16Point goal);
 
 
 
@@ -62,17 +83,46 @@ int compare_long(const void* a, const void* b)
 
 
 
-// TODO: remove?
-void debug_print_raw_data(RawData* const rd)
+// comparison function for the priority queue used in the path search
+bool cheaper_path(const PathCost a, const PathCost b)
 {
-    fprintf(stderr, "DEBUG: raw data\n");
-    fprintf(stderr, "\tm = %d\n\twidth = %ld\n\theight = %ld\n", rd->m, rd->width, rd->height);
-    fprintf(stderr, "\tp1 = (%ld, %ld)\n\tp2 = (%ld, %ld)\n", rd->p1x, rd->p1y, rd->p2x, rd->p2y);
+    return a.intersections < b.intersections || (a.intersections == b.intersections && a.length < b.length);
+}
 
-    fprintf(stderr, "\tCABLES:\n");
-    for(int i = 0; i < rd->m; i++) {
-        Wire w = rd->wires[i];
-        fprintf(stderr, "\t\t(%ld, %ld) <-> (%ld, %ld)\n", w.x1, w.y1, w.x2, w.y2);
+
+
+// TODO: remove?
+static void debug_print_raw_data(RawData* const rd)
+{
+    if(PRINT_DEBUG) {
+        fprintf(stderr, "DEBUG: raw data\n");
+        fprintf(stderr, "\tm = %d\n\twidth = %ld\n\theight = %ld\n", rd->m, rd->width, rd->height);
+        fprintf(stderr, "\tp1 = (%ld, %ld)\n\tp2 = (%ld, %ld)\n", rd->p1x, rd->p1y, rd->p2x, rd->p2y);
+
+        fprintf(stderr, "\tCABLES:\n");
+        for(int i = 0; i < rd->m; i++) {
+            Wire w = rd->wires[i];
+            fprintf(stderr, "\t\t(%ld, %ld) <-> (%ld, %ld)\n", w.x1, w.y1, w.x2, w.y2);
+        }
+    }
+}
+
+// TODO: remove?
+static void debug_print_graph(Graph* const g)
+{
+    if(PRINT_GRAPHS) {
+        const char* neighbor_symbol[] = {"·", "╶", "╴", "─", "╵", "└", "┘", "┴",
+                                         "╷", "┌", "┐", "┬", "│", "├", "┤", "┼"};
+
+        const char* cost_color[] = {"\033[0;37m", "\033[1;32m", "\033[1;36m", "\033[1;33m", "\033[1;31m"};
+        for(int16_t y = g->height - 1; y >= 0; y--) {
+            for(uint x = 0; x < g->width; x++) {
+                printf("%s%s", cost_color[g->node_cost[x][y]], neighbor_symbol[g->neighbors[x][y]]);
+            }
+            printf("\033[0m\n");
+        }
+        printf("Color indicates the cost (number of intersections) of a node: %s0, %s1, %s2, %s3, %s4\033[0m\n",
+               cost_color[0], cost_color[1], cost_color[2], cost_color[3], cost_color[4]);
     }
 }
 
@@ -160,9 +210,9 @@ void simplify_y_shift(RawData* const rd, const long shift, const long min_to_mov
 // TODO: refactor
 // Simplify the grid by removing identical neighboring columns/rows.
 // For number of existing wires m, after this function both the width and the height of the grid are
-// guaranteed to be equal to or less than 2*m+5. Since there can only be at most 3 unique
-// coordinates per cable, their sum is guaranteed to be <= 2*(2*m+5)-m = 3*m+10.
-// Therefore, their product (= total number of nodes) is <= ((3*m+10)/2)^2 = (1.5*m+5)^2
+// guaranteed to be equal to or less than 4*m+5. Since there can only be at most 3 unique
+// coordinates per cable, their sum is guaranteed to be <= 2*(4*m+5)-m = 5*m+10.
+// Therefore, their product (= total number of nodes) is <= ((5*m+10)/2)^2 = (2.5*m+5)^2
 void simplify(RawData* const rd)
 {
     assert(rd != NULL && rd->m > 0 && rd->wires != NULL);
@@ -227,27 +277,15 @@ void graph_malloc(Graph* const g, const RawData* const rd)
 {
     // of you change anything here, you may also need to adapt the function graph_free
     g->neighbors = malloc(rd->width * sizeof(uint8_t*));
-    if(!g->neighbors) {
-        fprintf(stderr, "Allocating %lu bytes for Graph neighbors array of arrays failed.\n",
-                rd->width * sizeof(uint8_t*));
+    g->node_cost = malloc(rd->width * sizeof(uint8_t*));
+    if(!g->neighbors || !g->node_cost) {
+        fprintf(stderr, "Allocation for Graph (outer array) failed.\n");
         exit(EXIT_FAILURE);
     }
     g->neighbors[0] = malloc(rd->width * rd->height * sizeof(uint8_t));
-    if(!g->neighbors[0]) {
-        fprintf(stderr, "Allocating %lu bytes for Graph neighbors failed.\n",
-                rd->width * rd->height * sizeof(uint8_t));
-        exit(EXIT_FAILURE);
-    }
-    g->node_cost = malloc(rd->width * sizeof(uint8_t*));
-    if(!g->node_cost) {
-        fprintf(stderr, "Allocating %lu bytes for Graph node_cost array of arrays failed.\n",
-                rd->width * sizeof(uint8_t*));
-        exit(EXIT_FAILURE);
-    }
     g->node_cost[0] = malloc(rd->width * rd->height * sizeof(uint8_t));
-    if(!g->node_cost[0]) {
-        fprintf(stderr, "Allocating %lu bytes for Graph node_cost failed.\n",
-                rd->width * rd->height * sizeof(uint8_t));
+    if(!g->neighbors[0] || !g->node_cost[0]) {
+        fprintf(stderr, "Allocation for Graph (inner array) failed.\n");
         exit(EXIT_FAILURE);
     }
     for(int x = 1; x < rd->width; x++) {
@@ -277,11 +315,12 @@ void graph_free(Graph* const g)
 void build_graph(Graph* const g, const RawData* const rd)
 {
     graph_malloc(g, rd);
-    g->p1x = rd->p1x;
-    g->p1y = rd->p1y;
-    g->p2x = rd->p2x;
-    g->p2y = rd->p2y;
-    memset(g->node_cost[0], 0, rd->width * rd->height); // by default nodes have a cost of 0
+    g->width = rd->width;
+    g->height = rd->height;
+    g->p1 = (Uint16Point) {(uint16_t)rd->p1x, (uint16_t)rd->p1y};
+    g->p2 = (Uint16Point) {(uint16_t)rd->p2x, (uint16_t)rd->p2y};
+    // by default nodes have a cost of 0
+    memset(g->node_cost[0], 0, rd->width * rd->height * sizeof(uint8_t));
 
     uint8_t bitmask_all_neighbors = NEIGH_X_NEG | NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS;
     memset(g->neighbors[0], bitmask_all_neighbors, rd->width * rd->height);
@@ -328,12 +367,104 @@ void build_graph(Graph* const g, const RawData* const rd)
 
 
 
+PathCost** new_scores_table(const size_t width, const size_t height, const uint8_t init_byte_value)
+{
+    PathCost** scores = malloc(width * sizeof(PathCost*));
+    if(!scores) {
+        return NULL;
+    }
+    scores[0] = malloc(width * height * sizeof(PathCost));
+    if(!scores[0]) {
+        free(scores);
+        return NULL;
+    }
+    scores[0][width * height - 1] = (PathCost) {42, 42};
+    memset(scores[0], init_byte_value, width * height * sizeof(PathCost)); // this memset causes a segfault
+    for(size_t x = 1; x < width; x++) {
+        scores[x] = scores[0] + (x * height);
+    }
+    return scores;
+}
+
+void free_scores_table(PathCost** scores)
+{
+    free(scores[0]);
+    free(scores);
+}
+
+
+
 // calculate the minimal cost possible for a path between p1 and p2, where the cost of a path is
 // defined as the sum of the node costs of all the nodes in the path, including start and end
-int minimal_cost(const Graph* const g)
+int minimal_cost(const Graph* const g, HeuristicFunc h)
 // A* search algorithm without recontructing the path or keeping track of the predecessor node
 {
-    exit(42);
+    const Uint16Point p1 = g->p1;
+    const Uint16Point p2 = g->p2;
+
+    PQueue* openset = pq_new(cheaper_path); // path costs are keys, node ids are values
+    assert(openset != NULL);
+    PathCost path_cost_p1 = {.intersections = g->node_cost[p1.x][p1.y], .length = 0};
+    pq_insert(openset, (KeyValPair) {.key = path_cost_p1, .val = p1});
+
+    PathCost** g_scores = new_scores_table(g->width, g->height, 0xFF);
+    assert(g_scores);
+
+    g_scores[p1.x][p1.y] = path_cost_p1;
+
+    while(!pq_is_empty(openset)) {
+        const KeyValPair current = pq_pop(openset);
+        const Uint16Point cur_point = current.val;
+        const PathCost cur_g_score = g_scores[cur_point.x][cur_point.y];
+        if(cur_point.x == p2.x && cur_point.y == p2.y) { // if current point is goal
+            pq_free(openset);
+            free_scores_table(g_scores);
+            return current.key.intersections;
+        }
+
+        Uint16Point neighbors[4];
+        int neigh_count = 0;
+        const uint8_t cur_neighbors_bitmap = g->neighbors[cur_point.x][cur_point.y];
+        if(cur_neighbors_bitmap & NEIGH_X_NEG) {
+            neighbors[neigh_count++] = (Uint16Point) {cur_point.x - 1, cur_point.y};
+        }
+        if(cur_neighbors_bitmap & NEIGH_X_POS) {
+            neighbors[neigh_count++] = (Uint16Point) {cur_point.x + 1, cur_point.y};
+        }
+        if(cur_neighbors_bitmap & NEIGH_Y_NEG) {
+            neighbors[neigh_count++] = (Uint16Point) {cur_point.x, cur_point.y - 1};
+        }
+        if(cur_neighbors_bitmap & NEIGH_Y_POS) {
+            neighbors[neigh_count++] = (Uint16Point) {cur_point.x, cur_point.y + 1};
+        }
+        // for each neighbor off current
+        for(int i = 0; i < neigh_count; i++) {
+            const Uint16Point neighbor = neighbors[i];
+            const PathCost tent_g_score = {cur_g_score.intersections +
+                                               g->node_cost[neighbor.x][neighbor.y],
+                                           cur_g_score.length + 1};
+            if(cheaper_path(tent_g_score, g_scores[neighbor.x][neighbor.y])) {
+                g_scores[neighbor.x][neighbor.y] = tent_g_score;
+                PathCost neigh_f_score = {tent_g_score.intersections, tent_g_score.length + h(neighbor, p2)};
+                pq_insert(openset, (KeyValPair) {neigh_f_score, neighbor});
+            }
+        }
+    }
+    // this point is only reached if there is no connection from p1 to p2
+    pq_free(openset);
+    free_scores_table(g_scores);
+    return -1;
+}
+
+
+
+static inline uint16_t abs_diff(const uint16_t a, const uint16_t b)
+{
+    return a > b ? a - b : b - a;
+}
+uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
+{
+    return abs_diff(p.x, goal.x) + abs_diff(p.y, goal.y);
 }
 
 
@@ -353,9 +484,11 @@ int main(void)
         Graph graph;
         build_graph(&graph, &raw_data);
 
-        // TODO: find path
+        debug_print_graph(&graph);
 
-        // TODO: print result
+        int minimal_intersections = minimal_cost(&graph, manhattan_distance);
+
+        printf("%d\n", minimal_intersections);
 
         free(raw_data.wires);
         graph_free(&graph);
