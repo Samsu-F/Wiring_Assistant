@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include <time.h> // DEBUG
+
 
 
 typedef struct PathCost {
@@ -26,8 +28,9 @@ typedef struct Uint16Point {
 #define MAX_M 99        // 0 < m < 100
 #define MAX_S 999999999 // 0 < s < 1000000000
 
-#define PRINT_DEBUG  false
-#define PRINT_GRAPHS false
+#define PRINT_DEBUG     false
+#define PRINT_GRAPHS    false
+#define PRINT_STOPWATCH true
 
 
 
@@ -473,24 +476,48 @@ uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 int main(void)
 {
     while(true) {
+        clock_t time_0 = clock();
+
         RawData raw_data;
         read_raw_data(&raw_data);
         if(raw_data.width == 0) {
             return EXIT_SUCCESS; // end of input was reached
         }
 
+        clock_t time_1 = clock();
+
         simplify(&raw_data);
+
+        clock_t time_2 = clock();
 
         Graph graph;
         build_graph(&graph, &raw_data);
 
+        clock_t time_3 = clock();
+
         debug_print_graph(&graph);
+
+        clock_t time_4 = clock();
 
         int minimal_intersections = minimal_cost(&graph, manhattan_distance);
 
-        printf("%d\n", minimal_intersections);
+        clock_t time_5 = clock();
 
         free(raw_data.wires);
         graph_free(&graph);
+
+        printf("%d\n", minimal_intersections);
+
+        if(PRINT_STOPWATCH) {
+            float ms_read_rd = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;
+            float ms_simplify = (float)(1000 * (time_2 - time_1)) / CLOCKS_PER_SEC;
+            float ms_build_gr = (float)(1000 * (time_3 - time_2)) / CLOCKS_PER_SEC;
+            float ms_min_inters = (float)(1000 * (time_5 - time_4)) / CLOCKS_PER_SEC;
+            printf("read_raw_data:         %7.3f ms\n"
+                   "simplify:              %7.3f ms\n"
+                   "build_graph:           %7.3f ms\n"
+                   "minimal_intersections: %7.3f ms\n\n",
+                   ms_read_rd, ms_simplify, ms_build_gr, ms_min_inters);
+        }
     }
 }
