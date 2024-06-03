@@ -7,6 +7,9 @@
 
 #include <time.h> // DEBUG
 
+/// TODO: split into multiple files
+/// TODO: refactor nearly everything
+
 
 
 typedef struct PathCost {
@@ -77,10 +80,11 @@ typedef uint16_t (*HeuristicFunc)(const Uint16Point p, const Uint16Point goal);
 
 
 // Comparison function for qsort
-int compare_long(const void* a, const void* b)
+// compare 2 long** by the value they are pointing to
+int compare_long_ptr(const void* a, const void* b)
 {
-    const long x = *((const long*)a);
-    const long y = *((const long*)b);
+    const long x = **(const long* const*)a;
+    const long y = **(const long* const*)b;
     return (x > y) - (x < y);
 }
 
@@ -164,47 +168,22 @@ void read_raw_data(RawData* const rd)
 
 
 
-// helper function for simplify
-// subtract shift from all x-coordinates of wire end points if >= min_to_move
-void simplify_x_shift(RawData* const rd, const long shift, const long min_to_move)
+// given a pointer to an array of long*, reduce and update all the long
+// lower bound of -1 is assumend and does not have to be included
+void reduce_worker(long* arr[], size_t length)
 {
-    assert(shift > 0);
-    rd->width -= shift;
-    for(int i = 0; i < rd->m; i++) {
-        if(rd->wires[i].x2 >= min_to_move) {
-            rd->wires[i].x2 -= shift;
-            // nested because x1 <= x2, so if x2 < min_to_move, then x1 will also be < min_to_move
-            if(rd->wires[i].x1 >= min_to_move) {
-                rd->wires[i].x1 -= shift;
+    qsort(arr, length, sizeof(long*), compare_long_ptr);
+    long prev = -1;
+    for(size_t i = 0; i < length; i++) {
+        long diff = *(arr[i]) - prev;
+        if(diff >= 3) {
+            // subtract shift from the rest of the array beginning at i
+            long shift = diff - 2;
+            for(size_t j = i; j < length; j++) {
+                *(arr[j]) -= shift;
             }
         }
-    }
-    if(rd->p1x >= min_to_move) {
-        rd->p1x -= shift;
-    }
-    if(rd->p2x >= min_to_move) {
-        rd->p2x -= shift;
-    }
-}
-// analogous for y
-// TODO: refactor and find a better way without repetition
-void simplify_y_shift(RawData* const rd, const long shift, const long min_to_move)
-{
-    assert(shift > 0);
-    rd->height -= shift;
-    for(int i = 0; i < rd->m; i++) {
-        if(rd->wires[i].y2 >= min_to_move) {
-            rd->wires[i].y2 -= shift;
-            if(rd->wires[i].y1 >= min_to_move) {
-                rd->wires[i].y1 -= shift;
-            }
-        }
-    }
-    if(rd->p1y >= min_to_move) {
-        rd->p1y -= shift;
-    }
-    if(rd->p2y >= min_to_move) {
-        rd->p2y -= shift;
+        prev = *(arr[i]);
     }
 }
 
@@ -214,61 +193,35 @@ void simplify_y_shift(RawData* const rd, const long shift, const long min_to_mov
 // Simplify the grid by removing identical neighboring columns/rows.
 // For number of existing wires m, after this function both the width and the height of the grid are
 // guaranteed to be equal to or less than 4*m+5. Since there can only be at most 3 unique
-// coordinates per cable, their sum is guaranteed to be <= 2*(4*m+5)-m = 5*m+10.
-// Therefore, their product (= total number of nodes) is <= ((5*m+10)/2)^2 = (2.5*m+5)^2
-void simplify(RawData* const rd)
+// coordinates per cable, their sum is guaranteed to be <= 2*(3*m+5) = 6*m+10.
+// Therefore, their product (= total number of nodes) is <= ((6*m+10)/2)^2 = (3*m+5)^2
+void reduce(RawData* const rd)
 {
     assert(rd != NULL && rd->m > 0 && rd->wires != NULL);
     size_t n = 2 * rd->m + 3; // the number of coordinates per direction
 
-    long xs[n]; // worst case size for these two VLAs is 1608 bytes each,
-    long ys[n]; // assuming sizeof(long) = 8. So unless ran on a very limited embedded system,
-                // the max stack size will definitely not be a problem.
+    /// TODO: use long* arrays and greatly reduce or remove the simplyfy_shift functions
+    long* xs[n]; // worst case size for these two VLAs is 1608 bytes each,
+    long* ys[n]; // assuming sizeof(long*) = 8. So unless ran on a very limited embedded system,
+                 // the max stack size will definitely not be a problem.
     for(int i = 0; i < rd->m; i++) {
-        xs[2 * i] = rd->wires[i].x1;
-        ys[2 * i] = rd->wires[i].y1;
-        xs[2 * i + 1] = rd->wires[i].x2;
-        ys[2 * i + 1] = rd->wires[i].y2;
+        xs[2 * i] = &(rd->wires[i].x1);
+        ys[2 * i] = &(rd->wires[i].y1);
+        xs[2 * i + 1] = &(rd->wires[i].x2);
+        ys[2 * i + 1] = &(rd->wires[i].y2);
     }
-    xs[n - 3] = rd->width;
-    ys[n - 3] = rd->height;
-    xs[n - 2] = rd->p1x;
-    ys[n - 2] = rd->p1y;
-    xs[n - 1] = rd->p2x;
-    ys[n - 1] = rd->p2y;
-    qsort(&xs, n, sizeof(long), compare_long);
-    qsort(&ys, n, sizeof(long), compare_long);
+    // include upper bound but not lower bound (-1)
+    xs[n - 3] = &(rd->width);
+    ys[n - 3] = &(rd->height);
+    xs[n - 2] = &(rd->p1x);
+    ys[n - 2] = &(rd->p1y);
+    xs[n - 1] = &(rd->p2x);
+    ys[n - 1] = &(rd->p2y);
 
-    long prev = -1; // the coordinate of the closest left to it (the previous in this sorted array)
-    long sum_shifts = 0; // to avoid having to update the rest of this sorted array each time,
-                         // keep track of all the shifts so for
-    for(size_t i = 0; i < n; i++) {
-        xs[i] -= sum_shifts;
-        long diff = xs[i] - prev;
-        if(diff >= 3) {
-            long shift = diff - 2;
-            simplify_x_shift(rd, shift, xs[i]);
-            sum_shifts += shift;
-            xs[i] -= shift;
-        }
-        prev = xs[i];
-    }
-    // now the same for y
-    prev = -1;
-    sum_shifts = 0;
-    for(size_t i = 0; i < n; i++) {
-        ys[i] -= sum_shifts;
-        long diff = ys[i] - prev;
-        if(diff >= 3) {
-            long shift = diff - 2;
-            simplify_y_shift(rd, shift, ys[i]);
-            sum_shifts += shift;
-            ys[i] -= shift;
-        }
-        prev = ys[i];
-    }
+    reduce_worker(xs, n);
+    reduce_worker(ys, n);
 
-    //////// DEBUG //////// TODO: remove
+    ////// DEBUG //////// TODO: remove
     debug_print_raw_data(rd);
 }
 
@@ -314,7 +267,7 @@ void graph_free(Graph* const g)
 
 // The pointers stored in g will be overwritten, so calling graph_free(g) before calling
 // build_graph to overwrite an existing graph will be necessary in most cases to avoid a memory leak.
-// Must not be called on a RawData struct without simplifying it first with simplify(rd)
+// Must not be called on a RawData struct without simplifying it first with reduce(rd)
 void build_graph(Graph* const g, const RawData* const rd)
 {
     graph_malloc(g, rd);
@@ -486,7 +439,7 @@ int main(void)
 
         clock_t time_1 = clock();
 
-        simplify(&raw_data);
+        reduce(&raw_data);
 
         clock_t time_2 = clock();
 
