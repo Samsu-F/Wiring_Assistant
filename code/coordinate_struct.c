@@ -7,11 +7,6 @@
 
 
 
-/// TODO: find better solution for this
-#define PRINT_DEBUG false
-
-
-
 // Comparison function for qsort
 // compare 2 long** by the value they are pointing to
 int compare_long_ptr(const void* a, const void* b)
@@ -19,24 +14,6 @@ int compare_long_ptr(const void* a, const void* b)
     const long x = **(const long* const*)a;
     const long y = **(const long* const*)b;
     return (x > y) - (x < y);
-}
-
-
-
-// TODO: remove?
-void debug_print_raw_data(RawData* const rd)
-{
-    if(PRINT_DEBUG) {
-        fprintf(stderr, "DEBUG: raw data\n");
-        fprintf(stderr, "\tm = %d\n\twidth = %ld\n\theight = %ld\n", rd->m, rd->width, rd->height);
-        fprintf(stderr, "\tp1 = (%ld, %ld)\n\tp2 = (%ld, %ld)\n", rd->p1x, rd->p1y, rd->p2x, rd->p2y);
-
-        fprintf(stderr, "\tCABLES:\n");
-        for(int i = 0; i < rd->m; i++) {
-            Wire w = rd->wires[i];
-            fprintf(stderr, "\t\t(%ld, %ld) <-> (%ld, %ld)\n", w.x1, w.y1, w.x2, w.y2);
-        }
-    }
 }
 
 
@@ -92,7 +69,4 @@ void reduce(RawData* const rd)
 
     reduce_worker(xs, n);
     reduce_worker(ys, n);
-
-    ////// DEBUG //////// TODO: remove
-    debug_print_raw_data(rd);
 }

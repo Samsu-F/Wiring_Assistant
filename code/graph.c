@@ -7,7 +7,6 @@
 
 
 /// TODO: find better solution for this
-// #define PRINT_DEBUG     false
 #define PRINT_GRAPHS true
 // #define PRINT_STOPWATCH true
 
