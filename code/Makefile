@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -Wall -Werror -O3
+CFLAGS = -O3 -Werror -W -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wswitch-default -Wcast-align=strict -Wbad-function-cast -Wstrict-overflow=4 -Winline -Wundef -Wnested-externs -Wunreachable-code -Wlogical-op -Wfloat-equal -Wredundant-decls -Wold-style-definition -Wwrite-strings -Wformat=2 -Wno-error=unused-parameter -Wno-error=inline -Wno-error=unreachable-code -fanalyzer
 
 # Target executable
 TARGET = build/wiring_assistant
@@ -21,11 +21,13 @@ all: $(TARGET)
 
 # Rule to link object files and create the executable
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+	@echo Linking $(TARGET)
+	@$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
 
 # Rule to compile C source files into object files
 build/%.o: %.c $(HDRS)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo Compiling $<
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 # Create build directory
 $(shell mkdir -p build)
