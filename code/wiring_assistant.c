@@ -168,10 +168,10 @@ int main(void)
             float ms_simplify = (float)(1000 * (time_2 - time_1)) / CLOCKS_PER_SEC;
             float ms_build_gr = (float)(1000 * (time_3 - time_2)) / CLOCKS_PER_SEC;
             float ms_min_inters = (float)(1000 * (time_5 - time_4)) / CLOCKS_PER_SEC;
-            printf("read_raw_data:         %7.3f ms\n"
-                   "simplify:              %7.3f ms\n"
-                   "build_graph:           %7.3f ms\n"
-                   "minimal_intersections: %7.3f ms\n\n",
+            printf("parse input:           %7.3f ms\n"
+                   "reduce:                %7.3f ms\n"
+                   "build graph:           %7.3f ms\n"
+                   "minimal intersections: %7.3f ms\n\n",
                    ms_read_rd, ms_simplify, ms_build_gr, ms_min_inters);
         }
     }

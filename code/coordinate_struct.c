@@ -73,7 +73,6 @@ void reduce(RawData* const rd)
     assert(rd != NULL && rd->m > 0 && rd->wires != NULL);
     size_t n = 2 * rd->m + 3; // the number of coordinates per direction
 
-    /// TODO: use long* arrays and greatly reduce or remove the simplyfy_shift functions
     long* xs[n]; // worst case size for these two VLAs is 1608 bytes each,
     long* ys[n]; // assuming sizeof(long*) = 8. So unless ran on a very limited embedded system,
                  // the max stack size will definitely not be a problem.
