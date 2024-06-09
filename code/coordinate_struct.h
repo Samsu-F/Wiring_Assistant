@@ -29,8 +29,6 @@ typedef struct RawData {
 
 
 
-void reduce_worker(long* arr[], size_t length);
-
 void reduce(RawData* const rd);
 
 

@@ -9,7 +9,7 @@
 
 // Comparison function for qsort
 // compare 2 long** by the value they are pointing to
-int compare_long_ptr(const void* a, const void* b)
+static int compare_long_ptr(const void* a, const void* b)
 {
     const long x = **(const long* const*)a;
     const long y = **(const long* const*)b;
@@ -20,7 +20,7 @@ int compare_long_ptr(const void* a, const void* b)
 
 // given a pointer to an array of long*, reduce and update all the long
 // lower bound of -1 is assumend and does not have to be included
-void reduce_worker(long* arr[], size_t length)
+static void reduce_worker(long* arr[], size_t length)
 {
     qsort(arr, length, sizeof(long*), compare_long_ptr);
     long prev = -1;

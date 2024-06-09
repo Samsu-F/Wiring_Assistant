@@ -5,20 +5,18 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include <time.h> // DEBUG
+#include <time.h> // DEBUG /// TODO: decide on what to do with the stopwatch functionality
 
 
 #include "coordinate_struct.h"
 #include "graph.h"
 #include "a_star.h"
 
-/// TODO: split into multiple files
+
 /// TODO: refactor nearly everything
+/// TODO: cuntion name prefixes
+/// TODO: find good and consistent name for RawData / CoordinateStruct
 
-
-
-// #define MAX_M 99        // 0 < m < 100
-// #define MAX_S 999999999 // 0 < s < 1000000000
 
 
 /// TODO: find better solution for this
@@ -28,7 +26,7 @@
 
 
 // TODO: explanation
-void read_raw_data(RawData* const rd)
+static void read_raw_data(RawData* const rd)
 {
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
     scanf("%d %ld", &(rd->m), &(rd->width));
@@ -63,7 +61,7 @@ void read_raw_data(RawData* const rd)
 // TODO: split into two parts, one of which is independent from coordinate_struct
 // Build a graph based on rd
 // Caller is responsible for freeing returned graph with graph_free
-Graph* build_graph(const RawData* const rd)
+static Graph* build_graph(const RawData* const rd)
 {
     Graph* g = graph_malloc(rd->width, rd->height);
     g->width = rd->width;
@@ -123,7 +121,8 @@ static inline uint16_t abs_diff(const uint16_t a, const uint16_t b)
 {
     return a > b ? a - b : b - a;
 }
-uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
+
+static uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 {
     return abs_diff(p.x, goal.x) + abs_diff(p.y, goal.y);
 }

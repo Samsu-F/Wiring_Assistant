@@ -19,14 +19,14 @@ typedef struct PathCost {
 
 
 // comparison function for the priority queue used in the path search
-bool cheaper_path(const PathCost a, const PathCost b)
+static bool cheaper_path(const PathCost a, const PathCost b)
 {
     return a.intersections < b.intersections || (a.intersections == b.intersections && a.length < b.length);
 }
 
 
 
-PathCost** new_scores_table(const size_t width, const size_t height, const uint8_t init_byte_value)
+static PathCost** new_scores_table(const size_t width, const size_t height, const uint8_t init_byte_value)
 {
     PathCost** scores = malloc(width * sizeof(PathCost*));
     if(!scores) {
@@ -45,7 +45,7 @@ PathCost** new_scores_table(const size_t width, const size_t height, const uint8
     return scores;
 }
 
-void free_scores_table(PathCost** scores)
+static void free_scores_table(PathCost** scores)
 {
     free(scores[0]);
     free(scores);
