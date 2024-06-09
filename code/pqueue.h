@@ -1,5 +1,7 @@
-#ifndef MIN_PRIORITY_QUEUE
-#define MIN_PRIORITY_QUEUE
+#ifndef _PQUEUE_H
+#define _PQUEUE_H
+
+
 /*
  * Array based heap implementation of a priority queue
  */
