@@ -6,12 +6,6 @@
 #include <stdint.h>
 
 
-
-typedef struct PathCost {
-    uint8_t intersections;
-    uint16_t length;
-} PathCost;
-
 typedef struct Uint16Point {
     uint16_t x;
     uint16_t y;
@@ -36,6 +30,13 @@ typedef struct Graph {
 
 void debug_print_graph(Graph* const g);
 
+
+// allocate memory for a graph, all of its internal arrays and set their pointers correctly.
+// guaranteed to return a valid pointer
+Graph* graph_malloc(const long width, const long height);
+
+// free all internal arrays and the graph itself. Must only be used if graph_malloc was used for
+// allocation, otherwise there could be a memory leak.
 void graph_free(Graph* const g);
 
 

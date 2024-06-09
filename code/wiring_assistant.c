@@ -61,38 +61,12 @@ void read_raw_data(RawData* const rd)
 
 
 
-// helper function for build_graph
-// it should probably not be called from anywhere else
-void graph_malloc(Graph* const g, const RawData* const rd)
+// TODO: split into two parts, one of which is independent from coordinate_struct
+// Build a graph based on rd
+// Caller is responsible for freeing returned graph with graph_free
+Graph* build_graph(const RawData* const rd)
 {
-    // of you change anything here, you may also need to adapt the function graph_free
-    g->neighbors = malloc(rd->width * sizeof(uint8_t*));
-    g->node_cost = malloc(rd->width * sizeof(uint8_t*));
-    if(!g->neighbors || !g->node_cost) {
-        fprintf(stderr, "Allocation for Graph (outer array) failed.\n");
-        exit(EXIT_FAILURE);
-    }
-    g->neighbors[0] = malloc(rd->width * rd->height * sizeof(uint8_t));
-    g->node_cost[0] = malloc(rd->width * rd->height * sizeof(uint8_t));
-    if(!g->neighbors[0] || !g->node_cost[0]) {
-        fprintf(stderr, "Allocation for Graph (inner array) failed.\n");
-        exit(EXIT_FAILURE);
-    }
-    for(int x = 1; x < rd->width; x++) {
-        g->neighbors[x] = g->neighbors[0] + (x * rd->height);
-        g->node_cost[x] = g->node_cost[0] + (x * rd->height);
-    }
-}
-
-
-
-// TODO: split into two parts, one of which is independant from coordinate_struct
-// The pointers stored in g will be overwritten, so calling graph_free(g) before calling
-// build_graph to overwrite an existing graph will be necessary in most cases to avoid a memory leak.
-// Must not be called on a RawData struct without simplifying it first with reduce(rd)
-void build_graph(Graph* const g, const RawData* const rd)
-{
-    graph_malloc(g, rd);
+    Graph* g = graph_malloc(rd->width, rd->height);
     g->width = rd->width;
     g->height = rd->height;
     g->p1 = (Uint16Point) {(uint16_t)rd->p1x, (uint16_t)rd->p1y};
@@ -141,6 +115,7 @@ void build_graph(Graph* const g, const RawData* const rd)
             g->node_cost[x][y2] += 1;
         }
     }
+    return g;
 }
 
 
@@ -167,30 +142,26 @@ int main(void)
         if(raw_data.width == 0) {
             return EXIT_SUCCESS; // end of input was reached
         }
-
         clock_t time_1 = clock();
 
         reduce(&raw_data);
-
         clock_t time_2 = clock();
 
-        Graph graph;
-        build_graph(&graph, &raw_data);
-
+        Graph* graph_p = build_graph(&raw_data);
         clock_t time_3 = clock();
 
-        debug_print_graph(&graph);
-
+        debug_print_graph(graph_p);
         clock_t time_4 = clock();
 
-        int minimal_intersections = a_star_cost(&graph, manhattan_distance);
-
+        int minimal_intersections = a_star_cost(graph_p, manhattan_distance);
         clock_t time_5 = clock();
 
-        free(raw_data.wires);
-        graph_free(&graph);
-
         printf("%d\n", minimal_intersections);
+
+        free(raw_data.wires);
+        raw_data.wires = NULL;
+        graph_free(graph_p);
+        graph_p = NULL;
 
         if(PRINT_STOPWATCH) {
             float ms_read_rd = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;

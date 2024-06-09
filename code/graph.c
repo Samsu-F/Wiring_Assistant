@@ -8,7 +8,7 @@
 
 /// TODO: find better solution for this
 // #define PRINT_DEBUG     false
-#define PRINT_GRAPHS false
+#define PRINT_GRAPHS true
 // #define PRINT_STOPWATCH true
 
 
@@ -34,7 +34,7 @@ void debug_print_graph(Graph* const g)
 
 
 
-// free everything inside the Graph struct
+// free everything inside the graph and the graph itself
 void graph_free(Graph* const g)
 {
     free(g->neighbors[0]);
@@ -43,4 +43,35 @@ void graph_free(Graph* const g)
     g->neighbors = NULL;
     free(g->node_cost);
     g->node_cost = NULL;
+    free(g);
+}
+
+
+
+Graph* graph_malloc(const long width, const long height)
+{
+    // if you change anything here, you may also need to adapt the function graph_free
+
+    Graph* g = malloc(sizeof(Graph));
+    if(!g) {
+        fprintf(stderr, "Allocation for Graph failed.\n");
+        exit(EXIT_FAILURE);
+    }
+    g->neighbors = malloc(width * sizeof(uint8_t*));
+    g->node_cost = malloc(width * sizeof(uint8_t*));
+    if(!g->neighbors || !g->node_cost) {
+        fprintf(stderr, "Allocation for Graph (outer array) failed.\n");
+        exit(EXIT_FAILURE);
+    }
+    g->neighbors[0] = malloc(width * height * sizeof(uint8_t));
+    g->node_cost[0] = malloc(width * height * sizeof(uint8_t));
+    if(!g->neighbors[0] || !g->node_cost[0]) {
+        fprintf(stderr, "Allocation for Graph (inner array) failed.\n");
+        exit(EXIT_FAILURE);
+    }
+    for(int x = 1; x < width; x++) {
+        g->neighbors[x] = g->neighbors[0] + (x * height);
+        g->node_cost[x] = g->node_cost[0] + (x * height);
+    }
+    return g;
 }

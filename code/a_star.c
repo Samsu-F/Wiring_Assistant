@@ -6,6 +6,12 @@
 
 #include "coordinate_struct.h"
 
+
+typedef struct PathCost {
+    uint16_t intersections;
+    uint16_t length;
+} PathCost;
+
 #define PQ_KEY_TYPE PathCost
 #define PQ_VAL_TYPE Uint16Point
 #include "pqueue.h"
