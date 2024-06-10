@@ -38,7 +38,7 @@ static PathCost** new_scores_table(const size_t width, const size_t height, cons
         return NULL;
     }
     scores[0][width * height - 1] = (PathCost) {42, 42};
-    memset(scores[0], init_byte_value, width * height * sizeof(PathCost)); // this memset causes a segfault
+    memset(scores[0], init_byte_value, width * height * sizeof(PathCost));
     for(size_t x = 1; x < width; x++) {
         scores[x] = scores[0] + (x * height);
     }

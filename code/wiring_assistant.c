@@ -14,7 +14,7 @@
 
 
 /// TODO: refactor nearly everything
-/// TODO: cuntion name prefixes
+/// TODO: function name prefixes
 /// TODO: find good and consistent name for RawData / CoordinateStruct
 
 
@@ -92,7 +92,7 @@ static Graph* build_graph(const RawData* const rd)
                 g->neighbors[x][y] &= ~(NEIGH_X_NEG | NEIGH_X_POS); // no neighbor in +- x direction
                 g->node_cost[x][y] += 1;                            // increase cost
             }
-            g->neighbors[x2][y] &= ~NEIGH_X_NEG; // no neighbor in positive x direction
+            g->neighbors[x2][y] &= ~NEIGH_X_NEG; // no neighbor in negative x direction
             g->node_cost[x2][y] += 1;            // increase cost
         }
         // TODO: refactor and find better way to do this without repetition

@@ -42,20 +42,26 @@ typedef bool (*PQKeyCompareFunc)(const pq_keytype, const pq_keytype);
 typedef struct PQueue PQueue;
 
 
-// compare is a function to compare keys
-// compare(key1, key2) == true iff key1 has greater priority than key2, i.e. it will be popped sooner
+// compare is a function to compare keys.
+// compare(key1, key2) == true iff key1 has greater priority than key2, i.e. it will be popped sooner.
 PQueue* pq_new(PQKeyCompareFunc compare);
 
+// Free any internal pointers belonging to the PQueue struct and q itself.
+// This does not free pointers that are still saved in the queue.
 void pq_free(PQueue* q);
 
+// Returns true iff q is empty.
 bool pq_is_empty(const PQueue* q);
 
+// inserts KeyValPair new into q
 void pq_insert(PQueue* q, const KeyValPair new);
 
-// must not be called on an empty PQueue
+// Get the KeyValPair with the greatest priority without removing it from q.
+// Must not be called on an empty PQueue
 KeyValPair pq_peek(const PQueue* q);
 
-// must not be called on an empty PQueue
+// Get the KeyValPair with the greatest priority and remove it from q.
+// Must not be called on an empty PQueue
 KeyValPair pq_pop(PQueue* q);
 
 

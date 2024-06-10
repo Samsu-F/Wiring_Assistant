@@ -119,6 +119,8 @@ static void _pq_heapify_node(PQueue* q, size_t node)
 
 
 
+// Free any internal pointers belonging to the PQueue struct and q itself.
+// This does not free pointers that are still saved in the queue.
 PQueue* pq_new(PQKeyCompareFunc compare)
 {
     PQueue* q = malloc(sizeof(PQueue));
