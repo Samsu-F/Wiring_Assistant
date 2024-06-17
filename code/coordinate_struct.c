@@ -22,19 +22,20 @@ static int compare_long_ptr(const void* a, const void* b)
 // lower bound of -1 is assumend and does not have to be included
 static void reduce_worker(long* arr[], size_t length)
 {
-    /// TODO: make it run in O(m) instead of O(m^2), but try to keep it easy to understand
     qsort(arr, length, sizeof(long*), compare_long_ptr);
-    long prev = -1;
+    long prev_val = -1;  // the previous value to compare the current value to
+    long sum_shifts = 0; // the sum of all shifts done so far, i.e. this has to be substracted from
+                         // the rest of the values
     for(size_t i = 0; i < length; i++) {
-        long diff = *(arr[i]) - prev;
+        *(arr[i]) -= sum_shifts; // apply all previously found shifts
+        long diff = *(arr[i]) - prev_val;
         if(diff >= 3) {
-            // subtract shift from the rest of the array beginning at i
             long shift = diff - 2;
-            for(size_t j = i; j < length; j++) {
-                *(arr[j]) -= shift;
-            }
+            // shift has to be subtracted from the rest of the array beginning at i
+            *(arr[i]) -= shift;
+            sum_shifts += shift;
         }
-        prev = *(arr[i]);
+        prev_val = *(arr[i]);
     }
 }
 

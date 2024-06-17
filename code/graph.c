@@ -26,6 +26,7 @@ void debug_print_graph(Graph* const g)
             }
             printf("\033[0m\n");
         }
+        printf("width = %d, height = %d\n", g->width, g->height);
         printf("Color indicates the cost (number of intersections) of a node: %s0, %s1, %s2, %s3, %s4\033[0m\n",
                cost_color[0], cost_color[1], cost_color[2], cost_color[3], cost_color[4]);
     }
