@@ -10,13 +10,13 @@ CFLAGS = -O3 -Werror -W -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wstrict-p
 TARGET = build/wiring_assistant
 
 # Source files
-SRCS = a_star.c coordinate_struct.c graph.c pqueue.c wiring_assistant.c
+SRCS = a_star.c endpoint_repr.c graph.c pqueue.c wiring_assistant.c
 
 # Object files
 OBJS = $(addprefix build/,$(SRCS:.c=.o))
 
 # Header files
-HDRS = a_star.h coordinate_struct.h graph.h pqueue.h
+HDRS = a_star.h endpoint_repr.h graph.h pqueue.h
 
 # Default target
 all: $(TARGET)

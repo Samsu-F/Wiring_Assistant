@@ -8,13 +8,9 @@
 #include <time.h> // DEBUG /// TODO: decide on what to do with the stopwatch functionality
 
 
-#include "coordinate_struct.h"
+#include "endpoint_repr.h"
 #include "graph.h"
 #include "a_star.h"
-
-
-/// TODO: function name prefixes and consitent naming
-/// TODO: find good and consistent name for RawData / CoordinateStruct
 
 
 
@@ -24,68 +20,70 @@
 
 
 
-// Parse a problem instance read from stdin and write it into rd.
-// Argument rd must not be a nullpointer.
-static void read_raw_data(RawData* const rd)
+// Parse a problem instance read from stdin and write it into er.
+// Argument er must not be a nullpointer.
+// er->wires will be overwritten with NULL or a pointer to newly allocated memory, for which the
+// caller is responsible for freeing.
+static void parse_endpoint_repr(EndpointRepr* const er)
 {
-    assert(rd);
+    assert(er);
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
-    scanf("%d %ld", &(rd->m), &(rd->width));
-    rd->height = rd->width;
-    if(rd->width == 0) { // if the line just parsed marks the end of the input
+    scanf("%d %ld", &(er->m), &(er->width));
+    er->height = er->width;
+    if(er->width == 0) { // if the line just parsed marks the end of the input
         // ensure there is no random data there which might be falsely interpretet as a pointer
-        rd->wires = NULL;
+        er->wires = NULL;
         return;
     }
-    rd->wires = malloc(rd->m * sizeof(Wire)); // TODO: is this a good idea?
-    if(!rd->wires) {
-        fprintf(stderr, "Allocating %lu bytes for RawData wires array failed.\n", rd->m * sizeof(Wire));
+    er->wires = malloc(er->m * sizeof(Wire));
+    if(!er->wires) {
+        fprintf(stderr, "Allocating %lu bytes for EndpointRepr wires array failed.\n", er->m * sizeof(Wire));
         exit(EXIT_FAILURE);
     }
 
     // read second line. Semantics: (x_left y_bottom x_right y_bottom)*M; Format[0-9]{1,9} 4M times
-    for(int i = 0; i < rd->m; i++) {
+    for(int i = 0; i < er->m; i++) {
         long x1, y1, x2, y2;
         scanf("%ld %ld %ld %ld", &x1, &y1, &x2, &y2);
-        rd->wires[i].x1 = x1;
-        rd->wires[i].y1 = y1;
-        rd->wires[i].x2 = x2;
-        rd->wires[i].y2 = y2;
+        er->wires[i].x1 = x1;
+        er->wires[i].y1 = y1;
+        er->wires[i].x2 = x2;
+        er->wires[i].y2 = y2;
     }
 
     // read third line. Semantics: p1_x p1_y p2_x p2_y; Format ^[0-9]{1,9} [0-9]{1,9} [0-9]{1,9} [0-9]{1,9}$
-    scanf("%ld %ld %ld %ld", &(rd->p1x), &(rd->p1y), &(rd->p2x), &(rd->p2y));
+    scanf("%ld %ld %ld %ld", &(er->p1x), &(er->p1y), &(er->p2x), &(er->p2y));
 }
 
 
 
-// TODO: split into two parts, one of which is independent from coordinate_struct
-// Build a graph based on rd
+// TODO: split into two parts, one of which is independent from endpoint_repr
+// Build a graph based on er
 // Caller is responsible for freeing returned graph with graph_free
-static Graph* build_graph(const RawData* const rd)
+static Graph* build_graph(const EndpointRepr* const er)
 {
-    Graph* g = graph_malloc(rd->width, rd->height);
-    g->width = rd->width;
-    g->height = rd->height;
-    g->p1 = (Uint16Point) {(uint16_t)rd->p1x, (uint16_t)rd->p1y};
-    g->p2 = (Uint16Point) {(uint16_t)rd->p2x, (uint16_t)rd->p2y};
+    Graph* g = graph_malloc(er->width, er->height);
+    g->width = er->width;
+    g->height = er->height;
+    g->p1 = (Uint16Point) {(uint16_t)er->p1x, (uint16_t)er->p1y};
+    g->p2 = (Uint16Point) {(uint16_t)er->p2x, (uint16_t)er->p2y};
     // by default nodes have a cost of 0
-    memset(g->node_cost[0], 0, rd->width * rd->height * sizeof(uint8_t));
+    memset(g->node_cost[0], 0, er->width * er->height * sizeof(uint8_t));
 
     uint8_t bitmask_all_neighbors = NEIGH_X_NEG | NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS;
-    memset(g->neighbors[0], bitmask_all_neighbors, rd->width * rd->height);
+    memset(g->neighbors[0], bitmask_all_neighbors, er->width * er->height);
     // now every node is marked as having all four neighbors. Remove neighbors where this does not apply
-    memset(g->neighbors[0], NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS, rd->height);
-    memset(g->neighbors[rd->width - 1], NEIGH_X_NEG | NEIGH_Y_NEG | NEIGH_Y_POS, rd->height);
-    for(long x = 0; x < rd->width; x++) {
+    memset(g->neighbors[0], NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS, er->height);
+    memset(g->neighbors[er->width - 1], NEIGH_X_NEG | NEIGH_Y_NEG | NEIGH_Y_POS, er->height);
+    for(long x = 0; x < er->width; x++) {
         g->neighbors[x][0] &= ~NEIGH_Y_NEG; // unset bit indicating neighbor in negative y direction
-        g->neighbors[x][rd->height - 1] &= ~NEIGH_Y_POS;
+        g->neighbors[x][er->height - 1] &= ~NEIGH_Y_POS;
     }
-    for(int i = 0; i < rd->m; i++) {             // for each wire in rd
-        if(rd->wires[i].y1 == rd->wires[i].y2) { // horizontal wire in x direction
-            long x1 = rd->wires[i].x1;
-            long x2 = rd->wires[i].x2;
-            long y = rd->wires[i].y1;
+    for(int i = 0; i < er->m; i++) {             // for each wire in er
+        if(er->wires[i].y1 == er->wires[i].y2) { // horizontal wire in x direction
+            long x1 = er->wires[i].x1;
+            long x2 = er->wires[i].x2;
+            long y = er->wires[i].y1;
             assert(x1 < x2);
             g->neighbors[x1][y] &= ~NEIGH_X_POS; // no neighbor in positive x direction
             g->node_cost[x1][y] += 1;            // increase cost
@@ -98,10 +96,10 @@ static Graph* build_graph(const RawData* const rd)
         }
         // TODO: refactor and find better way to do this without repetition
         else { // vertical wire in y direction. Basically the same procedure as for horizontal wires
-            assert(rd->wires[i].x1 == rd->wires[i].x2);
-            long y1 = rd->wires[i].y1;
-            long y2 = rd->wires[i].y2;
-            long x = rd->wires[i].x1;
+            assert(er->wires[i].x1 == er->wires[i].x2);
+            long y1 = er->wires[i].y1;
+            long y2 = er->wires[i].y2;
+            long x = er->wires[i].x1;
             assert(y1 < y2);
             g->neighbors[x][y1] &= ~NEIGH_Y_POS;
             g->node_cost[x][y1] += 1;
@@ -115,6 +113,7 @@ static Graph* build_graph(const RawData* const rd)
     }
     return g;
 }
+
 
 
 //calculate the absolute difference between two uint16 values
@@ -138,17 +137,17 @@ int main(void)
     while(true) {
         clock_t time_0 = clock();
 
-        RawData raw_data;
-        read_raw_data(&raw_data);
-        if(raw_data.width == 0) {
+        EndpointRepr endpoint_repr;
+        parse_endpoint_repr(&endpoint_repr);
+        if(endpoint_repr.width == 0) {
             return EXIT_SUCCESS; // end of input was reached
         }
         clock_t time_1 = clock();
 
-        reduce(&raw_data);
+        reduce(&endpoint_repr);
         clock_t time_2 = clock();
 
-        Graph* graph_p = build_graph(&raw_data);
+        Graph* graph_p = build_graph(&endpoint_repr);
         clock_t time_3 = clock();
 
         debug_print_graph(graph_p);
@@ -159,13 +158,13 @@ int main(void)
 
         printf("%d\n", minimal_intersections);
 
-        free(raw_data.wires);
-        raw_data.wires = NULL;
+        free(endpoint_repr.wires);
+        endpoint_repr.wires = NULL;
         graph_free(graph_p);
         graph_p = NULL;
 
         if(PRINT_STOPWATCH) {
-            float ms_read_rd = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;
+            float ms_parse_input = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;
             float ms_simplify = (float)(1000 * (time_2 - time_1)) / CLOCKS_PER_SEC;
             float ms_build_gr = (float)(1000 * (time_3 - time_2)) / CLOCKS_PER_SEC;
             float ms_min_inters = (float)(1000 * (time_5 - time_4)) / CLOCKS_PER_SEC;
@@ -173,7 +172,7 @@ int main(void)
                    "reduce:                %7.3f ms\n"
                    "build graph:           %7.3f ms\n"
                    "minimal intersections: %7.3f ms\n\n",
-                   ms_read_rd, ms_simplify, ms_build_gr, ms_min_inters);
+                   ms_parse_input, ms_simplify, ms_build_gr, ms_min_inters);
         }
     }
 }

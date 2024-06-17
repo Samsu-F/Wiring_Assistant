@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "coordinate_struct.h"
+#include "endpoint_repr.h"
 
 
 typedef struct PathCost {
