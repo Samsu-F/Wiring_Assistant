@@ -13,8 +13,7 @@
 #include "a_star.h"
 
 
-/// TODO: refactor nearly everything
-/// TODO: function name prefixes
+/// TODO: function name prefixes and consitent naming
 /// TODO: find good and consistent name for RawData / CoordinateStruct
 
 
@@ -25,9 +24,11 @@
 
 
 
-// TODO: explanation
+// Parse a problem instance read from stdin and write it into rd.
+// Argument rd must not be a nullpointer.
 static void read_raw_data(RawData* const rd)
 {
+    assert(rd);
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
     scanf("%d %ld", &(rd->m), &(rd->width));
     rd->height = rd->width;
@@ -116,12 +117,14 @@ static Graph* build_graph(const RawData* const rd)
 }
 
 
-
+//calculate the absolute difference between two uint16 values
 static inline uint16_t abs_diff(const uint16_t a, const uint16_t b)
 {
     return a > b ? a - b : b - a;
 }
 
+// calculate the manhattan distance between two Uint16Point
+// manhattan_distance(p1, p2) = manhattan_distance(p2, p1) >= 0
 static uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 {
     return abs_diff(p.x, goal.x) + abs_diff(p.y, goal.y);

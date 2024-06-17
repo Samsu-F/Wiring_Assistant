@@ -26,6 +26,9 @@ static bool cheaper_path(const PathCost a, const PathCost b)
 
 
 
+// Allocate and initialize a scores table for the A* algorithm.
+// May return NULL if allocation failed.
+// Caller is responsible for freeing the table again with free_scores_table [see below].
 static PathCost** new_scores_table(const size_t width, const size_t height, const uint8_t init_byte_value)
 {
     PathCost** scores = malloc(width * sizeof(PathCost*));
@@ -45,6 +48,7 @@ static PathCost** new_scores_table(const size_t width, const size_t height, cons
     return scores;
 }
 
+// free a scores table that was allocated by new_scores_table and all of its internal allocations
 static void free_scores_table(PathCost** scores)
 {
     free(scores[0]);
@@ -53,10 +57,10 @@ static void free_scores_table(PathCost** scores)
 
 
 
-// calculate the minimal cost possible for a path between p1 and p2, where the cost of a path is
-// defined as the sum of the node costs of all the nodes in the path, including start and end
+// Calculate the minimal cost possible for a path between p1 and p2, where the cost of a path is
+// defined as the sum of the node costs of all the nodes in the path, including start and end.
+// A* search algorithm without recontructing the path or keeping track of the predecessor node.
 int a_star_cost(const Graph* const g, HeuristicFunc h)
-// A* search algorithm without recontructing the path or keeping track of the predecessor node
 {
     const Uint16Point p1 = g->p1;
     const Uint16Point p2 = g->p2;
@@ -67,7 +71,10 @@ int a_star_cost(const Graph* const g, HeuristicFunc h)
     pq_insert(openset, (KeyValPair) {.key = path_cost_p1, .val = p1});
 
     PathCost** g_scores = new_scores_table(g->width, g->height, 0xFF);
-    assert(g_scores);
+    if(!g_scores) {
+        fprintf(stderr, "Allocation for g_scores table failed.\n");
+        exit(EXIT_FAILURE);
+    }
 
     g_scores[p1.x][p1.y] = path_cost_p1;
 

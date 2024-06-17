@@ -22,6 +22,7 @@ static int compare_long_ptr(const void* a, const void* b)
 // lower bound of -1 is assumend and does not have to be included
 static void reduce_worker(long* arr[], size_t length)
 {
+    /// TODO: make it run in O(m) instead of O(m^2), but try to keep it easy to understand
     qsort(arr, length, sizeof(long*), compare_long_ptr);
     long prev = -1;
     for(size_t i = 0; i < length; i++) {
@@ -39,17 +40,20 @@ static void reduce_worker(long* arr[], size_t length)
 
 
 
-// TODO: refactor
 // Simplify the grid by removing identical neighboring columns/rows.
+// Must not be called on a nullpointer.
 // For number of existing wires m, after this function both the width and the height of the grid are
 // guaranteed to be equal to or less than 4*m+5. Since there can only be at most 3 unique
 // coordinates per cable, their sum is guaranteed to be <= 2*(3*m+5) = 6*m+10.
 // Therefore, their product (= total number of nodes) is <= ((6*m+10)/2)^2 = (3*m+5)^2
 void reduce(RawData* const rd)
+// create arrays for x- and y-coordinates, fill them with all the values and call reduce_worker
+// on them to do the main work.
 {
     assert(rd != NULL && rd->m > 0 && rd->wires != NULL);
     size_t n = 2 * rd->m + 3; // the number of coordinates per direction
 
+    // use array of long* so the original long values can be changed when going through the array
     long* xs[n]; // worst case size for these two VLAs is 1608 bytes each,
     long* ys[n]; // assuming sizeof(long*) = 8. So unless ran on a very limited embedded system,
                  // the max stack size will definitely not be a problem.
