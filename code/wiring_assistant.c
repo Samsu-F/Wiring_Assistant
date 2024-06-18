@@ -156,23 +156,23 @@ int main(void)
         int minimal_intersections = a_star_cost(graph_p, manhattan_distance);
         clock_t time_5 = clock();
 
+        if(PRINT_STOPWATCH) {
+            float ms_parse_input = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;
+            float ms_simplify = (float)(1000 * (time_2 - time_1)) / CLOCKS_PER_SEC;
+            float ms_build_gr = (float)(1000 * (time_3 - time_2)) / CLOCKS_PER_SEC;
+            float ms_min_inters = (float)(1000 * (time_5 - time_4)) / CLOCKS_PER_SEC;
+            printf("parse input:    %7.3f ms\n"
+                   "reduce:         %7.3f ms\n"
+                   "build graph:    %7.3f ms\n"
+                   "A*:             %7.3f ms\n",
+                   ms_parse_input, ms_simplify, ms_build_gr, ms_min_inters);
+        }
+
         printf("%d\n", minimal_intersections);
 
         free(endpoint_repr.wires);
         endpoint_repr.wires = NULL;
         graph_free(graph_p);
         graph_p = NULL;
-
-        if(PRINT_STOPWATCH) {
-            float ms_parse_input = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;
-            float ms_simplify = (float)(1000 * (time_2 - time_1)) / CLOCKS_PER_SEC;
-            float ms_build_gr = (float)(1000 * (time_3 - time_2)) / CLOCKS_PER_SEC;
-            float ms_min_inters = (float)(1000 * (time_5 - time_4)) / CLOCKS_PER_SEC;
-            printf("parse input:           %7.3f ms\n"
-                   "reduce:                %7.3f ms\n"
-                   "build graph:           %7.3f ms\n"
-                   "minimal intersections: %7.3f ms\n\n",
-                   ms_parse_input, ms_simplify, ms_build_gr, ms_min_inters);
-        }
     }
 }
