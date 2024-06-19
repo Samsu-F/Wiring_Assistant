@@ -28,7 +28,7 @@ typedef struct Graph {
 
 
 
-void debug_print_graph(Graph* const g);
+void print_graph(Graph* const g);
 
 
 // allocate memory for a graph, all of its internal arrays and set their pointers correctly.

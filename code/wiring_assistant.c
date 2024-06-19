@@ -4,9 +4,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
-
-#include <time.h> // DEBUG /// TODO: decide on what to do with the stopwatch functionality
-
+#include <ctype.h>
+#include <unistd.h>
+#include <time.h>
 
 #include "endpoint_repr.h"
 #include "graph.h"
@@ -14,9 +14,34 @@
 
 
 
-/// TODO: find better solution for this
-// #define PRINT_GRAPHS    false
-#define PRINT_STOPWATCH true
+// parse args and write 0 or 1 to given pointers
+static bool parse_command_line_args(int argc, char** argv, int* gflag_ptr, int* tflag_ptr)
+{
+    *gflag_ptr = 0;
+    *tflag_ptr = 0;
+
+    opterr = 0;
+
+    int c;
+    while((c = getopt(argc, argv, "gt")) != -1)
+        switch(c) {
+            case 'g':
+                *gflag_ptr = 1;
+                break;
+            case 't':
+                *tflag_ptr = 1;
+                break;
+            case '?':
+                if(isprint(optopt))
+                    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+                else
+                    fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+                return false;
+            default:
+                return false;
+        }
+    return true;
+}
 
 
 
@@ -132,8 +157,14 @@ static uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 
 
 // TODO: explanation
-int main(void)
+int main(int argc, char** argv)
 {
+    int gflag, tflag; // command line flags for printing the graph and time
+    if(!parse_command_line_args(argc, argv, &gflag, &tflag)) {
+        fprintf(stderr, "Parsing command line args failed.\n");
+        exit(EXIT_FAILURE);
+    }
+
     while(true) {
         clock_t time_0 = clock();
 
@@ -150,13 +181,15 @@ int main(void)
         Graph* graph_p = build_graph(&endpoint_repr);
         clock_t time_3 = clock();
 
-        debug_print_graph(graph_p);
-        clock_t time_4 = clock();
+        if(gflag) {
+            print_graph(graph_p);
+        }
 
+        clock_t time_4 = clock();
         int minimal_intersections = a_star_cost(graph_p, manhattan_distance);
         clock_t time_5 = clock();
 
-        if(PRINT_STOPWATCH) {
+        if(tflag) {
             float ms_parse_input = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;
             float ms_simplify = (float)(1000 * (time_2 - time_1)) / CLOCKS_PER_SEC;
             float ms_build_gr = (float)(1000 * (time_3 - time_2)) / CLOCKS_PER_SEC;
