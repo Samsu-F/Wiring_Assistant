@@ -156,7 +156,6 @@ static uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 
 
 
-// TODO: explanation
 int main(int argc, char** argv)
 {
     int gflag, tflag; // command line flags for printing the graph and time
@@ -166,34 +165,41 @@ int main(int argc, char** argv)
     }
 
     while(true) {
+        // Plan of attack:
+        //    1. Parse one problem instance from stdin
+        //    2. Reduction
+        //    3. Build graph
+        //    4. Calculate cost of cheapest path using A*
+        //    5. Optionally print graph and stopwatch times, print result
+
         clock_t time_0 = clock();
 
         EndpointRepr endpoint_repr;
         parse_endpoint_repr(&endpoint_repr);
-        if(endpoint_repr.width == 0) {
-            return EXIT_SUCCESS; // end of input was reached
-        }
         clock_t time_1 = clock();
+
+        if(endpoint_repr.width == 0) { // if end of input was reached
+            return EXIT_SUCCESS;
+        }
 
         reduce(&endpoint_repr);
         clock_t time_2 = clock();
 
-        Graph* graph_p = build_graph(&endpoint_repr);
+        Graph* graph = build_graph(&endpoint_repr);
         clock_t time_3 = clock();
 
+        int minimal_intersections = a_star_cost(graph, manhattan_distance);
+        clock_t time_4 = clock();
+
         if(gflag) {
-            print_graph(graph_p);
+            print_graph(graph);
         }
 
-        clock_t time_4 = clock();
-        int minimal_intersections = a_star_cost(graph_p, manhattan_distance);
-        clock_t time_5 = clock();
-
-        if(tflag) {
+        if(tflag) { // print stopwatch times
             float ms_parse_input = (float)(1000 * (time_1 - time_0)) / CLOCKS_PER_SEC;
             float ms_simplify = (float)(1000 * (time_2 - time_1)) / CLOCKS_PER_SEC;
             float ms_build_gr = (float)(1000 * (time_3 - time_2)) / CLOCKS_PER_SEC;
-            float ms_min_inters = (float)(1000 * (time_5 - time_4)) / CLOCKS_PER_SEC;
+            float ms_min_inters = (float)(1000 * (time_4 - time_3)) / CLOCKS_PER_SEC;
             printf("parse input:    %7.3f ms\n"
                    "reduce:         %7.3f ms\n"
                    "build graph:    %7.3f ms\n"
@@ -201,11 +207,11 @@ int main(int argc, char** argv)
                    ms_parse_input, ms_simplify, ms_build_gr, ms_min_inters);
         }
 
-        printf("%d\n", minimal_intersections);
+        printf("%d\n", minimal_intersections); // print result
 
         free(endpoint_repr.wires);
         endpoint_repr.wires = NULL;
-        graph_free(graph_p);
-        graph_p = NULL;
+        graph_free(graph);
+        graph = NULL;
     }
 }
