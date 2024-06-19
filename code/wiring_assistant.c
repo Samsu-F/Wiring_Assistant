@@ -82,7 +82,6 @@ static void parse_endpoint_repr(EndpointRepr* const er)
 
 
 
-// TODO: split into two parts, one of which is independent from endpoint_repr
 // Build a graph based on er
 // Caller is responsible for freeing returned graph with graph_free
 static Graph* build_graph(const EndpointRepr* const er)
@@ -104,6 +103,7 @@ static Graph* build_graph(const EndpointRepr* const er)
         g->neighbors[x][0] &= ~NEIGH_Y_NEG; // unset bit indicating neighbor in negative y direction
         g->neighbors[x][er->height - 1] &= ~NEIGH_Y_POS;
     }
+    // remove edges where existing wires are
     for(int i = 0; i < er->m; i++) {             // for each wire in er
         if(er->wires[i].y1 == er->wires[i].y2) { // horizontal wire in x direction
             long x1 = er->wires[i].x1;
@@ -119,7 +119,6 @@ static Graph* build_graph(const EndpointRepr* const er)
             g->neighbors[x2][y] &= ~NEIGH_X_NEG; // no neighbor in negative x direction
             g->node_cost[x2][y] += 1;            // increase cost
         }
-        // TODO: refactor and find better way to do this without repetition
         else { // vertical wire in y direction. Basically the same procedure as for horizontal wires
             assert(er->wires[i].x1 == er->wires[i].x2);
             long y1 = er->wires[i].y1;
@@ -141,7 +140,7 @@ static Graph* build_graph(const EndpointRepr* const er)
 
 
 
-//calculate the absolute difference between two uint16 values
+// calculate the absolute difference between two uint16 values
 static inline uint16_t abs_diff(const uint16_t a, const uint16_t b)
 {
     return a > b ? a - b : b - a;

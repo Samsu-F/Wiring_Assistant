@@ -92,6 +92,7 @@ int a_star_cost(const Graph* const g, HeuristicFunc h)
         Uint16Point neighbors[4];
         int neigh_count = 0;
         const uint8_t cur_neighbors_bitmap = g->neighbors[cur_point.x][cur_point.y];
+        // for each direction, check if there is an edge
         if(cur_neighbors_bitmap & NEIGH_X_NEG) {
             neighbors[neigh_count++] = (Uint16Point) {cur_point.x - 1, cur_point.y};
         }
@@ -104,7 +105,7 @@ int a_star_cost(const Graph* const g, HeuristicFunc h)
         if(cur_neighbors_bitmap & NEIGH_Y_POS) {
             neighbors[neigh_count++] = (Uint16Point) {cur_point.x, cur_point.y + 1};
         }
-        // for each neighbor off current
+        // for each neighbor of current
         for(int i = 0; i < neigh_count; i++) {
             const Uint16Point neighbor = neighbors[i];
             const PathCost tent_g_score = {cur_g_score.intersections +
