@@ -15,16 +15,20 @@
 
 
 // parse args and write 0 or 1 to given pointers
-static bool parse_command_line_args(int argc, char** argv, int* gflag_ptr, int* tflag_ptr)
+static bool parse_command_line_args(int argc, char** argv, int* gflag_ptr, int* pflag_ptr, int* tflag_ptr)
 {
     *gflag_ptr = 0;
+    *pflag_ptr = 0;
     *tflag_ptr = 0;
 
     opterr = 0;
 
     int c;
-    while((c = getopt(argc, argv, "gt")) != -1)
+    while((c = getopt(argc, argv, "gpt")) != -1)
         switch(c) {
+            case 'p':
+                *pflag_ptr = 1;
+                /* FALLTHRU */ // intentional, as -p implies -g
             case 'g':
                 *gflag_ptr = 1;
                 break;
@@ -158,8 +162,8 @@ static uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 
 int main(int argc, char** argv)
 {
-    int gflag, tflag; // command line flags for printing the graph and time
-    if(!parse_command_line_args(argc, argv, &gflag, &tflag)) {
+    int gflag, pflag, tflag; // command line flags for printing the graph, path and time
+    if(!parse_command_line_args(argc, argv, &gflag, &pflag, &tflag)) {
         fprintf(stderr, "Parsing command line args failed.\n");
         exit(EXIT_FAILURE);
     }
@@ -192,7 +196,7 @@ int main(int argc, char** argv)
         clock_t time_4 = clock();
 
         if(gflag) {
-            print_graph(graph);
+            print_graph(graph, pflag);
         }
 
         if(tflag) { // print stopwatch times

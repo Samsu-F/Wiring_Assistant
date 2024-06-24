@@ -7,33 +7,35 @@
 
 
 
-void print_graph(Graph* const g)
+void print_graph(Graph* const g, bool mark_path)
 {
     // calculate which nodes are used in the path
     bool is_on_path[g->width * g->height];
-    memset(is_on_path, false, g->width * g->height * sizeof(bool));
-    for(Uint16Point cur_point = g->p2; cur_point.x != g->p1.x || cur_point.y != g->p1.y;
-        cur_point = g->previous[cur_point.x][cur_point.y]) {
-        if(cur_point.x >= g->width || cur_point.y >= g->height) {
-            break;
+    if(mark_path) {
+        memset(is_on_path, false, g->width * g->height * sizeof(bool));
+        for(Uint16Point cur_point = g->p2; cur_point.x != g->p1.x || cur_point.y != g->p1.y;
+            cur_point = g->previous[cur_point.x][cur_point.y]) {
+            if(cur_point.x >= g->width || cur_point.y >= g->height) {
+                break;
+            }
+            is_on_path[cur_point.x + g->width * cur_point.y] = true;
         }
-        is_on_path[cur_point.x + g->width * cur_point.y] = true;
     }
 
     printf("\n");
-    // const char* neighbor_symbol[] = {"·", "╶", "╴", "─", "╵", "└", "┘", "┴",
-    //                                  "╷", "┌", "┐", "┬", "│", "├", "┤", "┼"};
+    const char* neighbor_symbol[] = {"·", "╶", "╴", "─", "╵", "└", "┘", "┴",
+                                     "╷", "┌", "┐", "┬", "│", "├", "┤", "┼"};
     // const char* neighbor_symbol[] = {"·", "╺", "╸", "━", "╹", "┗", "┛", "┻",
     //                                  "╻", "┏", "┓", "┳", "┃", "┣", "┫", "╋"};
-    const char* neighbor_symbol[] = {"·", "╺", "╸", "═", "╹", "╚", "╝", "╩",
-                                     "╻", "╔", "╗", "╦", "║", "╠", "╣", "╬"};
+    // const char* neighbor_symbol[] = {"·", "╺", "╸", "═", "╹", "╚", "╝", "╩",
+    //                                  "╻", "╔", "╗", "╦", "║", "╠", "╣", "╬"};
 
     const char* cost_color[] = {"37", "1;32", "1;36", "1;33", "1;31"};
     for(int16_t y = g->height - 1; y >= 0; y--) {
         for(uint16_t x = 0; x < g->width; x++) {
             bool start_end = (g->p1.x == x && g->p1.y == y) || (g->p2.x == x && g->p2.y == y);
             printf("\033[0;%s%sm%s", cost_color[g->node_cost[x][y]],
-                   start_end ? ";105" : (is_on_path[x + g->width * y] ? ";104" : ""),
+                   start_end ? ";105" : (mark_path && is_on_path[x + g->width * y] ? ";1;104" : ""),
                    neighbor_symbol[g->neighbors[x][y]]);
         }
         printf("\033[0m\n");

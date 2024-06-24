@@ -4,6 +4,8 @@
 
 
 #include <stdint.h>
+#include <stdbool.h>
+
 
 
 typedef struct Uint16Point {
@@ -29,7 +31,7 @@ typedef struct Graph {
 
 
 
-void print_graph(Graph* const g);
+void print_graph(Graph* const g, bool mark_path);
 
 
 // allocate memory for a graph, all of its internal arrays and set their pointers correctly.
