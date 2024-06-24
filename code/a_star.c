@@ -112,6 +112,7 @@ int a_star_cost(const Graph* const g, HeuristicFunc h)
                                                g->node_cost[neighbor.x][neighbor.y],
                                            cur_g_score.length + 1};
             if(cheaper_path(tent_g_score, g_scores[neighbor.x][neighbor.y])) {
+                g->previous[neighbor.x][neighbor.y] = cur_point;
                 g_scores[neighbor.x][neighbor.y] = tent_g_score;
                 PathCost neigh_f_score = {tent_g_score.intersections, tent_g_score.length + h(neighbor, p2)};
                 pq_insert(openset, (KeyValPair) {neigh_f_score, neighbor});

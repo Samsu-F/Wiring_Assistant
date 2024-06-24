@@ -91,8 +91,9 @@ static Graph* build_graph(const EndpointRepr* const er)
     g->height = er->height;
     g->p1 = (Uint16Point) {(uint16_t)er->p1x, (uint16_t)er->p1y};
     g->p2 = (Uint16Point) {(uint16_t)er->p2x, (uint16_t)er->p2y};
-    // by default nodes have a cost of 0
+    // by default nodes have a cost of 0 and no predecessor node
     memset(g->node_cost[0], 0, er->width * er->height * sizeof(uint8_t));
+    memset(g->previous[0], 0xFF, er->width * er->height * sizeof(Uint16Point));
 
     uint8_t bitmask_all_neighbors = NEIGH_X_NEG | NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS;
     memset(g->neighbors[0], bitmask_all_neighbors, er->width * er->height);

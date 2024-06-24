@@ -18,6 +18,7 @@ typedef struct Graph {
     Uint16Point p2;
     uint8_t** node_cost;
     uint8_t** neighbors;
+    Uint16Point** previous; // the table to save the predecessor node for path finding to reconstruct the path
 } Graph;
 
 // the bitmasks to select the single boolean bits
