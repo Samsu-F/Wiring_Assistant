@@ -22,7 +22,9 @@ typedef struct PathCost {
 // comparison function for the priority queue used in the path search
 static bool cheaper_path(const PathCost a, const PathCost b)
 {
-    return a.intersections < b.intersections || (a.intersections == b.intersections && a.length < b.length);
+    uint32_t metric_a = a.length | ((uint32_t)a.intersections << 16);
+    uint32_t metric_b = b.length | ((uint32_t)b.intersections << 16);
+    return metric_a < metric_b;
 }
 
 
