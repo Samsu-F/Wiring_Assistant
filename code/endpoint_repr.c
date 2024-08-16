@@ -8,11 +8,11 @@
 
 
 // Comparison function for qsort
-// compare 2 long** by the value they are pointing to
-static int compare_long_ptr(const void* a, const void* b)
+// compare 2 int_fast32_t** by the value they are pointing to
+static int compare_int_fast32_t_ptr(const void* a, const void* b)
 {
-    const long x = **(const long* const*)a;
-    const long y = **(const long* const*)b;
+    const int_fast32_t x = **(const int_fast32_t* const*)a;
+    const int_fast32_t y = **(const int_fast32_t* const*)b;
     return (x > y) - (x < y);
 }
 
@@ -20,17 +20,17 @@ static int compare_long_ptr(const void* a, const void* b)
 
 // given a pointer to an array of long*, reduce and update all the long
 // lower bound of -1 is assumend and does not have to be included
-static void reduce_worker(long* arr[], size_t length)
+static void reduce_worker(int_fast32_t* arr[], size_t length)
 {
-    qsort(arr, length, sizeof(long*), compare_long_ptr);
-    long prev_val = -1;  // the previous value to compare the current value to
-    long sum_shifts = 0; // the sum of all shifts done so far, i.e. this has to be substracted from
-                         // the rest of the values
+    qsort(arr, length, sizeof(int_fast32_t*), compare_int_fast32_t_ptr);
+    int_fast32_t prev_val = -1; // the previous value to compare the current value to
+    int_fast32_t sum_shifts = 0; // the sum of all shifts done so far, i.e. this has to be substracted from
+                                 // the rest of the values
     for(size_t i = 0; i < length; i++) {
         *(arr[i]) -= sum_shifts; // apply all previously found shifts
-        long diff = *(arr[i]) - prev_val;
+        int_fast32_t diff = *(arr[i]) - prev_val;
         if(diff >= 3) {
-            long shift = diff - 2;
+            int_fast32_t shift = diff - 2;
             // shift has to be subtracted from the rest of the array beginning at i
             *(arr[i]) -= shift;
             sum_shifts += shift;
@@ -55,9 +55,9 @@ void reduce(EndpointRepr* const er)
     size_t n = 2 * er->m + 3; // the number of coordinates per direction
 
     // use array of long* so the original long values can be changed when going through the array
-    long* xs[n]; // worst case size for these two VLAs is 1608 bytes each,
-    long* ys[n]; // assuming sizeof(long*) = 8. So unless ran on a very limited embedded system,
-                 // the max stack size will definitely not be a problem.
+    int_fast32_t* xs[n]; // worst case size for these two VLAs is 1608 bytes each,
+    int_fast32_t* ys[n]; // assuming sizeof(int_fast32_t*) = 8. So unless ran on a very limited embedded system,
+                         // the max stack size will definitely not be a problem.
     for(int i = 0; i < er->m; i++) {
         xs[2 * i] = &(er->wires[i].x1);
         ys[2 * i] = &(er->wires[i].y1);

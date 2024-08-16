@@ -4,8 +4,8 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <limits.h>
 
-#include "endpoint_repr.h"
 
 
 typedef struct PathCost {
@@ -22,8 +22,9 @@ typedef struct PathCost {
 // comparison function for the priority queue used in the path search
 static bool cheaper_path(const PathCost a, const PathCost b)
 {
-    uint32_t metric_a = a.length | ((uint32_t)a.intersections << 16);
-    uint32_t metric_b = b.length | ((uint32_t)b.intersections << 16);
+    uint32_t metric_a = a.length | ((uint32_t)a.intersections << (sizeof(a.length) * CHAR_BIT));
+    uint32_t metric_b = b.length | ((uint32_t)b.intersections << (sizeof(b.length) * CHAR_BIT));
+    static_assert(sizeof(metric_a) >= sizeof(a.intersections) + sizeof(a.length));
     return metric_a < metric_b;
 }
 
@@ -43,7 +44,6 @@ static PathCost** new_scores_table(const size_t width, const size_t height, cons
         free(scores);
         return NULL;
     }
-    scores[0][width * height - 1] = (PathCost) {42, 42};
     memset(scores[0], init_byte_value, width * height * sizeof(PathCost));
     for(size_t x = 1; x < width; x++) {
         scores[x] = scores[0] + (x * height);
@@ -63,7 +63,7 @@ static void free_scores_table(PathCost** scores)
 // Calculate the minimal cost possible for a path between p1 and p2, where the cost of a path is
 // defined as the sum of the node costs of all the nodes in the path, including start and end.
 // A* search algorithm without recontructing the path or keeping track of the predecessor node.
-int a_star_cost(const Graph* const g, HeuristicFunc h)
+int16_t a_star_cost(const Graph* const g, HeuristicFunc h)
 {
     const Uint16Point p1 = g->p1;
     const Uint16Point p2 = g->p2;

@@ -4,16 +4,17 @@
 
 
 #include <stddef.h>
+#include <stdint.h>
 
 
 
 // Representation of a wire by the coordinates of its end points
 // It must hold that x1 <= x2 and y1 <= y2
 typedef struct Wire {
-    long x1;
-    long y1;
-    long x2;
-    long y2;
+    int_fast32_t x1;
+    int_fast32_t y1;
+    int_fast32_t x2;
+    int_fast32_t y2;
 } Wire;
 
 
@@ -22,13 +23,13 @@ typedef struct Wire {
 // This form of representaion is useful for parsing and reduction but it is not intended for
 // running a pathfinding algorithm on it.
 typedef struct EndpointRepr {
-    int m;       // number of wires
-    long width;  // number of nodes in the x direction
-    long height; // number of nodes in the y direction
-    long p1x;    // coordinates of the start and end points
-    long p1y;
-    long p2x;
-    long p2y;
+    int m;               // number of wires
+    int_fast32_t width;  // number of nodes in the x direction
+    int_fast32_t height; // number of nodes in the y direction
+    int_fast32_t p1x;    // coordinates of the start and end points
+    int_fast32_t p1y;
+    int_fast32_t p2x;
+    int_fast32_t p2y;
     Wire* wires; // the given wire coordinates
 } EndpointRepr;
 

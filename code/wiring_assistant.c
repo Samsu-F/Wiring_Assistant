@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "endpoint_repr.h"
 #include "graph.h"
@@ -53,7 +54,7 @@ static void parse_endpoint_repr(EndpointRepr* const er)
 {
     assert(er);
     // read first line. Semantics: M S; Format ^[0-9]{1,2} [0-9]{1,9}$
-    scanf("%d %ld", &(er->m), &(er->width));
+    scanf("%d %" SCNdFAST32, &(er->m), &(er->width));
     er->height = er->width;
     if(er->width == 0) { // if the line just parsed marks the end of the input
         // ensure there is no random data there which might be falsely interpretet as a pointer
@@ -68,8 +69,8 @@ static void parse_endpoint_repr(EndpointRepr* const er)
 
     // read second line. Semantics: (x_left y_bottom x_right y_bottom)*M; Format[0-9]{1,9} 4M times
     for(int i = 0; i < er->m; i++) {
-        long x1, y1, x2, y2;
-        scanf("%ld %ld %ld %ld", &x1, &y1, &x2, &y2);
+        int_fast32_t x1, y1, x2, y2;
+        scanf("%" SCNdFAST32 " %" SCNdFAST32 " %" SCNdFAST32 " %" SCNdFAST32, &x1, &y1, &x2, &y2);
         er->wires[i].x1 = x1;
         er->wires[i].y1 = y1;
         er->wires[i].x2 = x2;
@@ -77,7 +78,8 @@ static void parse_endpoint_repr(EndpointRepr* const er)
     }
 
     // read third line. Semantics: p1_x p1_y p2_x p2_y; Format ^[0-9]{1,9} [0-9]{1,9} [0-9]{1,9} [0-9]{1,9}$
-    scanf("%ld %ld %ld %ld", &(er->p1x), &(er->p1y), &(er->p2x), &(er->p2y));
+    scanf("%" SCNdFAST32 " %" SCNdFAST32 " %" SCNdFAST32 " %" SCNdFAST32, &(er->p1x), &(er->p1y),
+          &(er->p2x), &(er->p2y));
 }
 
 
@@ -89,6 +91,8 @@ static Graph* build_graph(const EndpointRepr* const er)
     Graph* g = graph_malloc(er->width, er->height);
     g->width = er->width;
     g->height = er->height;
+    // check if width and height are not too small for new data type
+    assert(((int_fast32_t)g->width == er->width) && ((int_fast32_t)g->height == er->height));
     g->p1 = (Uint16Point) {(uint16_t)er->p1x, (uint16_t)er->p1y};
     g->p2 = (Uint16Point) {(uint16_t)er->p2x, (uint16_t)er->p2y};
     // by default nodes have a cost of 0
@@ -99,20 +103,20 @@ static Graph* build_graph(const EndpointRepr* const er)
     // now every node is marked as having all four neighbors. Remove neighbors where this does not apply
     memset(g->neighbors[0], NEIGH_X_POS | NEIGH_Y_NEG | NEIGH_Y_POS, er->height);
     memset(g->neighbors[er->width - 1], NEIGH_X_NEG | NEIGH_Y_NEG | NEIGH_Y_POS, er->height);
-    for(long x = 0; x < er->width; x++) {
+    for(int_fast32_t x = 0; x < er->width; x++) {
         g->neighbors[x][0] &= ~NEIGH_Y_NEG; // unset bit indicating neighbor in negative y direction
         g->neighbors[x][er->height - 1] &= ~NEIGH_Y_POS;
     }
     // remove edges where existing wires are
     for(int i = 0; i < er->m; i++) {             // for each wire in er
         if(er->wires[i].y1 == er->wires[i].y2) { // horizontal wire in x direction
-            long x1 = er->wires[i].x1;
-            long x2 = er->wires[i].x2;
-            long y = er->wires[i].y1;
+            int_fast32_t x1 = er->wires[i].x1;
+            int_fast32_t x2 = er->wires[i].x2;
+            int_fast32_t y = er->wires[i].y1;
             assert(x1 < x2);
             g->neighbors[x1][y] &= ~NEIGH_X_POS; // no neighbor in positive x direction
             g->node_cost[x1][y] += 1;            // increase cost
-            for(long x = x1 + 1; x < x2; x++) {
+            for(int_fast32_t x = x1 + 1; x < x2; x++) {
                 g->neighbors[x][y] &= ~(NEIGH_X_NEG | NEIGH_X_POS); // no neighbor in +- x direction
                 g->node_cost[x][y] += 1;                            // increase cost
             }
@@ -121,13 +125,13 @@ static Graph* build_graph(const EndpointRepr* const er)
         }
         else { // vertical wire in y direction. Basically the same procedure as for horizontal wires
             assert(er->wires[i].x1 == er->wires[i].x2);
-            long y1 = er->wires[i].y1;
-            long y2 = er->wires[i].y2;
-            long x = er->wires[i].x1;
+            int_fast32_t y1 = er->wires[i].y1;
+            int_fast32_t y2 = er->wires[i].y2;
+            int_fast32_t x = er->wires[i].x1;
             assert(y1 < y2);
             g->neighbors[x][y1] &= ~NEIGH_Y_POS;
             g->node_cost[x][y1] += 1;
-            for(long y = y1 + 1; y < y2; y++) {
+            for(int_fast32_t y = y1 + 1; y < y2; y++) {
                 g->neighbors[x][y] &= ~(NEIGH_Y_NEG | NEIGH_Y_POS);
                 g->node_cost[x][y] += 1;
             }
@@ -187,7 +191,7 @@ int main(int argc, char** argv)
         Graph* graph = build_graph(&endpoint_repr);
         clock_t time_3 = clock();
 
-        int minimal_intersections = a_star_cost(graph, manhattan_distance);
+        int16_t minimal_intersections = a_star_cost(graph, manhattan_distance);
         clock_t time_4 = clock();
 
         if(gflag) {
