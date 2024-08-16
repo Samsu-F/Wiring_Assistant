@@ -54,10 +54,13 @@ void reduce(EndpointRepr* const er)
     assert(er != NULL && er->m > 0 && er->wires != NULL);
     size_t n = 2 * er->m + 3; // the number of coordinates per direction
 
-    // use array of long* so the original long values can be changed when going through the array
-    int_fast32_t* xs[n]; // worst case size for these two VLAs is 1608 bytes each,
-    int_fast32_t* ys[n]; // assuming sizeof(int_fast32_t*) = 8. So unless ran on a very limited embedded system,
-                         // the max stack size will definitely not be a problem.
+    // use array of int_fast32_t* so the original values can be changed when going through the array
+    int_fast32_t** xs = malloc(n * sizeof(int_fast32_t*));
+    int_fast32_t** ys = malloc(n * sizeof(int_fast32_t*));
+    if(!xs || !ys) {
+        fprintf(stderr, "Allocating helper arrays for reduction failed.\n");
+        exit(EXIT_FAILURE);
+    }
     for(int i = 0; i < er->m; i++) {
         xs[2 * i] = &(er->wires[i].x1);
         ys[2 * i] = &(er->wires[i].y1);
@@ -74,4 +77,6 @@ void reduce(EndpointRepr* const er)
 
     reduce_worker(xs, n);
     reduce_worker(ys, n);
+    free(xs);
+    free(ys);
 }
