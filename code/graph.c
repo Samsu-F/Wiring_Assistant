@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <assert.h>
 
 
 
@@ -13,7 +14,8 @@ void print_graph(Graph* const g, bool** path_map)
                                      "╷", "┌", "┐", "┬", "│", "├", "┤", "┼"};
 
     const char* cost_color[] = {"37", "1;32", "1;36", "1;33", "1;31"};
-    for(int16_t y = g->height - 1; y >= 0; y--) {
+    assert(g->height <= INT16_MAX); // assert that it fits into an int16_t (line below)
+    for(int16_t y = (int16_t)g->height - 1; y >= 0; y--) {
         for(uint16_t x = 0; x < g->width; x++) {
             bool is_start_or_end = (g->p1.x == x && g->p1.y == y) || (g->p2.x == x && g->p2.y == y);
             bool is_part_of_path = (path_map != NULL) && path_map[x][y];
@@ -54,14 +56,14 @@ Graph* graph_malloc(const long width, const long height)
         fprintf(stderr, "Allocation for Graph failed.\n");
         exit(EXIT_FAILURE);
     }
-    g->neighbors = malloc(width * sizeof(uint8_t*));
-    g->node_cost = malloc(width * sizeof(uint8_t*));
+    g->neighbors = malloc((unsigned long)width * sizeof(uint8_t*));
+    g->node_cost = malloc((unsigned long)width * sizeof(uint8_t*));
     if(!g->neighbors || !g->node_cost) {
         fprintf(stderr, "Allocation for Graph (outer array) failed.\n");
         exit(EXIT_FAILURE);
     }
-    g->neighbors[0] = malloc(width * height * sizeof(uint8_t));
-    g->node_cost[0] = malloc(width * height * sizeof(uint8_t));
+    g->neighbors[0] = malloc((unsigned long)(width * height) * sizeof(uint8_t));
+    g->node_cost[0] = malloc((unsigned long)(width * height) * sizeof(uint8_t));
     if(!g->neighbors[0] || !g->node_cost[0]) {
         fprintf(stderr, "Allocation for Graph (inner array) failed.\n");
         exit(EXIT_FAILURE);

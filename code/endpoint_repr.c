@@ -52,7 +52,7 @@ void reduce(EndpointRepr* const er)
 // on them to do the main work.
 {
     assert(er != NULL && er->m > 0 && er->wires != NULL);
-    size_t n = 2 * er->m + 3; // the number of coordinates per direction
+    size_t n = 2 * (size_t)er->m + 3; // the number of coordinates per direction
 
     // use array of int_fast32_t* so the original values can be changed when going through the array
     int_fast32_t** xs = malloc(n * sizeof(int_fast32_t*));

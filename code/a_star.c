@@ -134,7 +134,7 @@ static int16_t a_star(const Graph* const g, HeuristicFunc h, Uint16Point** pred_
         if(cur_point.x == p2.x && cur_point.y == p2.y) { // if current point is goal
             pq_free(openset);
             free_scores_table(g_scores);
-            return current.key.intersections;
+            return (int16_t)current.key.intersections;
         }
 
         Uint16Point neighbors[4];
