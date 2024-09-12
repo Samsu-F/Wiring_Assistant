@@ -5,7 +5,8 @@ CC = gcc
 
 # Compiler flags
 CFLAGS = -O3 -W -Wall -Wextra
-PEDANTIC_FLAGS = -Werror -Wpedantic -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wswitch-default -Wcast-align=strict -Wbad-function-cast -Wstrict-overflow=4 -Winline -Wundef -Wnested-externs -Wunreachable-code -Wlogical-op -Wfloat-equal -Wredundant-decls -Wold-style-definition -Wwrite-strings -Wformat=2 -Wconversion -Wno-error=unused-parameter -Wno-error=inline -Wno-error=unreachable-code -fanalyzer
+PEDANTIC_FLAGS = -Werror -Wpedantic -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wswitch-default -Wcast-align=strict -Wbad-function-cast -Wstrict-overflow=4 -Winline -Wundef -Wnested-externs -Wunreachable-code -Wlogical-op -Wfloat-equal -Wredundant-decls -Wold-style-definition -Wwrite-strings -Wformat=2 -Wconversion -Wno-error=unused-parameter -Wno-error=inline -Wno-error=unreachable-code
+SANITIZE_FLAGS = -fanalyzer -fsanitize=address -fsanitize=undefined -fsanitize=leak -fsanitize=integer-divide-by-zero -fsanitize=null -fsanitize=signed-integer-overflow -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=object-size
 
 
 
@@ -46,6 +47,9 @@ $(BUILD_DIR)/%.o: %.c $(HDRS) | $(BUILD_DIR)
 # Use pedantic flags to enforce quality standards
 pedantic: CFLAGS += $(PEDANTIC_FLAGS)
 pedantic: clean all
+
+sanitize: PEDANTIC_FLAGS += $(SANITIZE_FLAGS)
+sanitize: pedantic
 
 # Clean up the build files
 clean:
