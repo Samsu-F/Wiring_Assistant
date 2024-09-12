@@ -1,12 +1,11 @@
 #include "graph.h"
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 
 
-void print_graph(Graph* const g)
+void print_graph(Graph* const g, bool** path_map)
 {
     printf("\n");
     const char* neighbor_symbol[] = {"·", "╶", "╴", "─", "╵", "└", "┘", "┴",
@@ -15,9 +14,10 @@ void print_graph(Graph* const g)
     const char* cost_color[] = {"37", "1;32", "1;36", "1;33", "1;31"};
     for(int16_t y = g->height - 1; y >= 0; y--) {
         for(uint16_t x = 0; x < g->width; x++) {
-            bool start_end = (g->p1.x == x && g->p1.y == y) || (g->p2.x == x && g->p2.y == y);
-            printf("\033[0;%s%sm%s", cost_color[g->node_cost[x][y]], start_end ? ";43" : "",
-                   neighbor_symbol[g->neighbors[x][y]]);
+            bool is_start_or_end = (g->p1.x == x && g->p1.y == y) || (g->p2.x == x && g->p2.y == y);
+            bool is_part_of_path = (path_map != NULL) && path_map[x][y];
+            printf("\033[0;%s%s%sm%s", cost_color[g->node_cost[x][y]], is_start_or_end ? ";43" : "",
+                   is_part_of_path ? ";5" : "", neighbor_symbol[g->neighbors[x][y]]);
         }
         printf("\033[0m\n");
     }
