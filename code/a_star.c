@@ -24,95 +24,85 @@ static bool cheaper_path(const PathCost a, const PathCost b)
 {
     uint32_t metric_a = a.length | ((uint32_t)a.intersections << (sizeof(a.length) * CHAR_BIT));
     uint32_t metric_b = b.length | ((uint32_t)b.intersections << (sizeof(b.length) * CHAR_BIT));
+    // guaranteed to be true as long as nothing is changed, but this might catch a mistake if the types are changed
     static_assert(sizeof(metric_a) >= sizeof(a.intersections) + sizeof(a.length));
     return metric_a < metric_b;
 }
 
 
 
+static void** new_matrix(const size_t width, const size_t height, const uint8_t init_byte_value, size_t sizeoftype)
+{
+    static_assert(sizeof(void*) == sizeof(void**)); // you would have to use a very strange system for this to fail, but the C standard does not guarantee it
+    void** matrix = malloc(width * sizeof(void*));
+    if(!matrix) {
+        return NULL;
+    }
+    matrix[0] = malloc(width * height * sizeoftype);
+    if(!matrix[0]) {
+        free(matrix);
+        return NULL;
+    }
+    memset(matrix[0], init_byte_value, width * height * sizeoftype);
+    for(size_t x = 1; x < width; x++) {
+        matrix[x] = (void*)((char*)(matrix[0]) + (x * height * sizeoftype));
+    }
+    return matrix;
+}
+
+static void free_matrix(void** matrix)
+{
+    free(matrix[0]);
+    free(matrix);
+}
+
+
+
+// wrapper function
 // Allocate and initialize a scores table for the A* algorithm.
 // May return NULL if allocation failed.
 // Caller is responsible for freeing the table again with free_scores_table [see below].
 static PathCost** new_scores_table(const size_t width, const size_t height, const uint8_t init_byte_value)
 {
-    PathCost** scores = malloc(width * sizeof(PathCost*));
-    if(!scores) {
-        return NULL;
-    }
-    scores[0] = malloc(width * height * sizeof(PathCost));
-    if(!scores[0]) {
-        free(scores);
-        return NULL;
-    }
-    memset(scores[0], init_byte_value, width * height * sizeof(PathCost));
-    for(size_t x = 1; x < width; x++) {
-        scores[x] = scores[0] + (x * height);
-    }
-    return scores;
+    static_assert((sizeof(PathCost**) == sizeof(void*)) && (sizeof(PathCost*) == sizeof(void*)));
+    return (PathCost**)new_matrix(width, height, init_byte_value, sizeof(PathCost));
 }
-
-// free a scores table that was allocated by new_scores_table and all of its internal allocations
+// wrapper function, free a scores table that was allocated by new_scores_table and all of its internal allocations
 static void free_scores_table(PathCost** scores)
 {
-    free(scores[0]);
-    free(scores);
+    free_matrix((void**)scores);
 }
 
 
-
+// wrapper function
 // Allocate and initialize a predecessor table that can be used in the A* algorithm
 // if the cheapest path taken should be reconstructed.
 // May return NULL if allocation failed.
 // Caller is responsible for freeing the table again with free_predecessor_table [see below].
 static Uint16Point** new_predecessor_table(const size_t width, const size_t height, const uint8_t init_byte_value)
 {
-    Uint16Point** pred_tbl = malloc(width * sizeof(Uint16Point*));
-    if(!pred_tbl) {
-        return NULL;
-    }
-    pred_tbl[0] = malloc(width * height * sizeof(Uint16Point));
-    if(!pred_tbl[0]) {
-        free(pred_tbl);
-        return NULL;
-    }
-    memset(pred_tbl[0], init_byte_value, width * height * sizeof(Uint16Point));
-    for(size_t x = 1; x < width; x++) {
-        pred_tbl[x] = pred_tbl[0] + (x * height);
-    }
-    return pred_tbl;
+    static_assert((sizeof(Uint16Point**) == sizeof(void*)) && (sizeof(Uint16Point*) == sizeof(void*)));
+    return (Uint16Point**)new_matrix(width, height, init_byte_value, sizeof(Uint16Point));
 }
-
+// wrapper function
 // free a predecessor_table table that was allocated by new_predecessor_table and all of its internal allocations
 static void free_predecessor_table(Uint16Point** pred_tbl)
 {
-    free(pred_tbl[0]);
-    free(pred_tbl);
+    free_matrix((void**)pred_tbl);
 }
 
 
 
+// wrapper function
 bool** new_path_map(const size_t width, const size_t height)
 {
-    bool** path_map = malloc(width * sizeof(bool*));
-    if(!path_map) {
-        return NULL;
-    }
-    path_map[0] = malloc(width * height * sizeof(bool));
-    if(!path_map[0]) {
-        free(path_map);
-        return NULL;
-    }
-    memset(path_map[0], false, width * height * sizeof(bool));
-    for(size_t x = 1; x < width; x++) {
-        path_map[x] = path_map[0] + (x * height);
-    }
-    return path_map;
+    static_assert((sizeof(bool**) == sizeof(void*)) && (sizeof(bool*) == sizeof(void*)));
+    return (bool**)new_matrix(width, height, (const uint8_t) false, sizeof(bool));
 }
-
+// wrapper function
 void free_path_map(bool** path_map)
 {
-    free(path_map[0]);
-    free(path_map);
+    free_matrix((void**)path_map);
 }
 
 
@@ -191,6 +181,7 @@ int16_t a_star_cost(const Graph* const g, HeuristicFunc h)
 {
     return a_star(g, h, NULL);
 }
+
 
 
 // wrapper for public interface for situations where the cost
