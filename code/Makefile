@@ -10,20 +10,20 @@ SANITIZE_FLAGS = -fanalyzer -fsanitize=address -fsanitize=undefined -fsanitize=l
 
 
 
+# The name of theb build directory
+BUILD_DIR = build
+
 # Target executable
-TARGET = build/wiring_assistant
+TARGET = $(BUILD_DIR)/wiring_assistant
 
 # Source files
 SRCS = a_star.c endpoint_repr.c graph.c pqueue.c wiring_assistant.c
 
 # Object files
-OBJS = $(addprefix build/,$(SRCS:.c=.o))
+OBJS = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 
 # Header files
 HDRS = a_star.h endpoint_repr.h graph.h pqueue.h
-
-# The name of theb build directory
-BUILD_DIR = build
 
 
 
