@@ -48,7 +48,7 @@ static void _pq_incr_allocated_n(PQueue* q)
     KeyValPair* new_ptr = realloc(q->nodes, new_size_bytes);
     if(!new_ptr) {
         fprintf(stderr, "pq: Reallocating %lu bytes to increase the capacity to %lu key value pairs failed.\n",
-                new_size_bytes, new_n);
+                (unsigned long)new_size_bytes, (unsigned long)new_n);
         // careful if you decide to not exit here: q->nodes is still allocated
         exit(EXIT_FAILURE);
     }

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 
 
@@ -21,7 +22,7 @@ void print_graph(Graph* const g, bool** path_map)
         }
         printf("\033[0m\n");
     }
-    printf("width = %d, height = %d\n", g->width, g->height);
+    printf("width = %" PRIu16 ", height = %" PRIu16 "\n", g->width, g->height);
     printf("Node cost (number of intersections): \033[0;%sm0\033[0m, \033[0;%sm1\033[0m, "
            "\033[0;%sm2\033[0m, \033[0;%sm3\033[0m, \033[0;%sm4\033[0m;\n",
            cost_color[0], cost_color[1], cost_color[2], cost_color[3], cost_color[4]);

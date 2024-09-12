@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <stdint.h>
 #include <assert.h>
 #include <ctype.h>
 #include <unistd.h>
@@ -73,7 +72,8 @@ static void parse_endpoint_repr(EndpointRepr* const er)
     }
     er->wires = malloc(er->m * sizeof(Wire));
     if(!er->wires) {
-        fprintf(stderr, "Allocating %lu bytes for EndpointRepr wires array failed.\n", er->m * sizeof(Wire));
+        fprintf(stderr, "Allocating %lu bytes for EndpointRepr wires array failed.\n",
+                (unsigned long)(er->m * sizeof(Wire)));
         exit(EXIT_FAILURE);
     }
 
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
                    ms_parse_input, ms_simplify, ms_build_gr, ms_min_inters);
         }
 
-        printf("%d\n", minimal_intersections); // print result
+        printf("%" PRId16 "\n", minimal_intersections); // print result
 
         free(endpoint_repr.wires);
         endpoint_repr.wires = NULL;
