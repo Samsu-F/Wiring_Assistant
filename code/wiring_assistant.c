@@ -16,19 +16,24 @@
 
 
 // parse args and write 0 or 1 to given pointers
-static bool parse_command_line_args(int argc, char** argv, int* gflag_ptr, int* pflag_ptr, int* tflag_ptr)
+static bool parse_command_line_args(int argc, char** argv, int* gflag_ptr, int* hflag_ptr,
+                                    int* pflag_ptr, int* tflag_ptr)
 {
     *gflag_ptr = 0;
+    *hflag_ptr = 0;
     *pflag_ptr = 0;
     *tflag_ptr = 0;
 
     opterr = 0;
 
     int c;
-    while((c = getopt(argc, argv, "gpt")) != -1)
+    while((c = getopt(argc, argv, "ghpt")) != -1)
         switch(c) {
             case 'g':
                 *gflag_ptr = 1;
+                break;
+            case 'h':
+                *hflag_ptr = 1;
                 break;
             case 'p':
                 *pflag_ptr = 1;
@@ -164,12 +169,33 @@ static uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 
 
 
+static void print_help(char* argv0)
+{
+    printf("Usage: %s [OPTIONS]\n", argv0);
+    printf("Read input from the 1006 ACM ICPC Problem 'Wiring Assistant' from stdin and solve it.\n\n");
+    printf("Options:\n");
+    printf("  -h\t(help)\tShow this help message and exit.\n");
+    printf("  -g\t(graph)\tPrint the graph after the reduction step.\n");
+    printf("  -p\t(path)\tMark the cheapest path in the printed graph. Implies -g.\n");
+    printf("  -t\t(time)\tMeasure and print the time to run each step.\n");
+    printf("\nAuthor\n  Written by Samuel Füßinger, 2024.\n  github.com/Samsu-F\n"); // Author and License ?
+}
+
+
+
 int main(int argc, char** argv)
 {
-    int gflag, pflag, tflag; // command line flags for printing the graph and time
-    if(!parse_command_line_args(argc, argv, &gflag, &pflag, &tflag)) {
+    int gflag, hflag, pflag, tflag; // command line flags for printing the graph and time
+    if(!parse_command_line_args(argc, argv, &gflag, &hflag, &pflag, &tflag)) {
         fprintf(stderr, "Parsing command line args failed.\n");
         exit(EXIT_FAILURE);
+    }
+    if(hflag) {         // help flag was set, so print help and exit
+        if(argv == 0) { // argc == 0 cannot happen with normal usage
+            exit(EXIT_FAILURE);
+        }
+        print_help(argv[0]);
+        exit(EXIT_SUCCESS);
     }
 
     while(true) {
