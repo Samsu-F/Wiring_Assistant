@@ -16,18 +16,23 @@
 
 
 // parse args and write 0 or 1 to given pointers
-static bool parse_command_line_args(int argc, char** argv, int* gflag_ptr, int* tflag_ptr)
+static bool parse_command_line_args(int argc, char** argv, int* gflag_ptr, int* pflag_ptr, int* tflag_ptr)
 {
     *gflag_ptr = 0;
+    *pflag_ptr = 0;
     *tflag_ptr = 0;
 
     opterr = 0;
 
     int c;
-    while((c = getopt(argc, argv, "gt")) != -1)
+    while((c = getopt(argc, argv, "gpt")) != -1)
         switch(c) {
             case 'g':
                 *gflag_ptr = 1;
+                break;
+            case 'p':
+                *pflag_ptr = 1;
+                *gflag_ptr = 1; // -p implies -g
                 break;
             case 't':
                 *tflag_ptr = 1;
@@ -161,8 +166,8 @@ static uint16_t manhattan_distance(const Uint16Point p, const Uint16Point goal)
 
 int main(int argc, char** argv)
 {
-    int gflag, tflag; // command line flags for printing the graph and time
-    if(!parse_command_line_args(argc, argv, &gflag, &tflag)) {
+    int gflag, pflag, tflag; // command line flags for printing the graph and time
+    if(!parse_command_line_args(argc, argv, &gflag, &pflag, &tflag)) {
         fprintf(stderr, "Parsing command line args failed.\n");
         exit(EXIT_FAILURE);
     }
@@ -191,11 +196,19 @@ int main(int argc, char** argv)
         Graph* graph = build_graph(&endpoint_repr);
         clock_t time_3 = clock();
 
-        int16_t minimal_intersections = a_star_cost(graph, manhattan_distance);
+        int16_t minimal_intersections;
+        bool** path_map = NULL; // only used if the -p flag is set
+        if(pflag) {             // use a_star_path_map so that we can print the cheapest path later
+            path_map = new_path_map(graph->width, graph->height);
+            minimal_intersections = a_star_path_map(graph, manhattan_distance, path_map);
+        }
+        else { // use the marginally quicker version if the path will not be needed later
+            minimal_intersections = a_star_cost(graph, manhattan_distance);
+        }
         clock_t time_4 = clock();
 
         if(gflag) {
-            print_graph(graph);
+            print_graph(graph, path_map);
         }
 
         if(tflag) { // print stopwatch times
@@ -216,5 +229,8 @@ int main(int argc, char** argv)
         endpoint_repr.wires = NULL;
         graph_free(graph);
         graph = NULL;
+        if(pflag) {
+            free_path_map(path_map);
+        }
     }
 }
