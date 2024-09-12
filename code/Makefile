@@ -4,7 +4,10 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -O3 -Werror -W -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wswitch-default -Wcast-align=strict -Wbad-function-cast -Wstrict-overflow=4 -Winline -Wundef -Wnested-externs -Wunreachable-code -Wlogical-op -Wfloat-equal -Wredundant-decls -Wold-style-definition -Wwrite-strings -Wformat=2 -Wno-error=unused-parameter -Wno-error=inline -Wno-error=unreachable-code -fanalyzer
+CFLAGS = -O3 -W -Wall -Wextra
+PEDANTIC_FLAGS = -Werror -Wpedantic -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wswitch-default -Wcast-align=strict -Wbad-function-cast -Wstrict-overflow=4 -Winline -Wundef -Wnested-externs -Wunreachable-code -Wlogical-op -Wfloat-equal -Wredundant-decls -Wold-style-definition -Wwrite-strings -Wformat=2 -Wno-error=unused-parameter -Wno-error=inline -Wno-error=unreachable-code -fanalyzer
+
+
 
 # Target executable
 TARGET = build/wiring_assistant
@@ -18,8 +21,17 @@ OBJS = $(addprefix build/,$(SRCS:.c=.o))
 # Header files
 HDRS = a_star.h endpoint_repr.h graph.h pqueue.h
 
+# The name of theb build directory
+BUILD_DIR = build
+
+
+
 # Default target
 all: $(TARGET)
+
+# Ensure build directory exists
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
 # Rule to link object files and create the executable
 $(TARGET): $(OBJS)
@@ -27,16 +39,18 @@ $(TARGET): $(OBJS)
 	@$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
 
 # Rule to compile C source files into object files
-build/%.o: %.c $(HDRS)
+$(BUILD_DIR)/%.o: %.c $(HDRS) | $(BUILD_DIR)
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Create build directory
-$(shell mkdir -p build)
+# Use pedantic flags to enforce quality standards
+pedantic: CFLAGS += $(PEDANTIC_FLAGS)
+pedantic: clean all
 
 # Clean up the build files
 clean:
-	rm -rf build
+	rm -rf $(OBJS) $(TARGET)
+	@rmdir --ignore-fail-on-non-empty $(BUILD_DIR) 2>/dev/null || true
 
 # Phony targets
-.PHONY: all clean
+.PHONY: all clean pedantic
