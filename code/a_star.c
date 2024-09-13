@@ -22,6 +22,10 @@ typedef struct PathMetric {
 // comparison function for the priority queue used in the path search
 static bool cheaper_path(const PathMetric a, const PathMetric b)
 {
+    // This comparison can be efficiently implemented by interpreting the tuple as an unsigned integer,
+    // wherein the cost occupies the most significant bits and the distance occupies the least significant bits.
+    // When implementing, this version ran faster on my machine than a straightforward lexicographic comparison,
+    // but this may depend on architecture, compiler, optimization, etc.
     uint32_t metric_a = a.length | ((uint32_t)a.intersections << (sizeof(a.length) * CHAR_BIT));
     uint32_t metric_b = b.length | ((uint32_t)b.intersections << (sizeof(b.length) * CHAR_BIT));
     // guaranteed to be true as long as nothing is changed, but this might catch a mistake if the types are changed
@@ -31,6 +35,8 @@ static bool cheaper_path(const PathMetric a, const PathMetric b)
 
 
 
+// returns a 2D-array accessible by indices [x][y], with 0 <= x < width and 0 <= y <= height.
+// must be freed using free_matrix [see below].
 static void** new_matrix(const size_t width, const size_t height, const uint8_t init_byte_value, size_t sizeoftype)
 {
     static_assert(sizeof(void*) == sizeof(void**)); // you would have to use a very strange system for this to fail, but the C standard does not guarantee it
@@ -162,6 +168,7 @@ static int16_t a_star(const Graph* const g, HeuristicFunc h, Uint16Point** pred_
                                                  g->node_cost[neighbor.x][neighbor.y],
                                              cur_g_score.length + 1};
             if(cheaper_path(tent_g_score, g_scores[neighbor.x][neighbor.y])) {
+                // if the new way to get there is cheaper than every path to this node found before
                 g_scores[neighbor.x][neighbor.y] = tent_g_score;
                 PathMetric neigh_f_score = {tent_g_score.intersections, tent_g_score.length + h(neighbor, p2)};
                 pq_insert(openset, (KeyValPair) {neigh_f_score, neighbor});
@@ -186,8 +193,8 @@ int16_t a_star_cost(const Graph* const g, HeuristicFunc h)
 
 
 
-// wrapper for public interface for situations where the cost
-// of the cheapest path as well as the path map needed.
+// public interface for situations where the cost of the cheapest path as well as
+// the path map are needed.
 int16_t a_star_path_map(const Graph* const g, HeuristicFunc h, bool** path_map)
 {
     // just some assertions and init
@@ -211,7 +218,7 @@ int16_t a_star_path_map(const Graph* const g, HeuristicFunc h, bool** path_map)
         uint16_t x = g->p2.x;
         uint16_t y = g->p2.y;
         while(!(x == g->p1.x && y == g->p1.y)) { // while we haven't reached the start (p1) yet
-            path_map[x][y] = true;
+            path_map[x][y] = true;               // mark the node as belonging to the cheapest path
             Uint16Point predecessor = pred_tbl[x][y];
             x = predecessor.x;
             y = predecessor.y;

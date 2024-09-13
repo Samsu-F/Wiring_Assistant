@@ -234,6 +234,7 @@ int main(int argc, char** argv)
         clock_t time_4 = clock();
 
         if(gflag) {
+            printf("\n\n");
             print_graph(graph, path_map);
         }
 
@@ -257,6 +258,7 @@ int main(int argc, char** argv)
         graph = NULL;
         if(pflag) {
             free_path_map(path_map);
+            path_map = NULL;
         }
     }
 }

@@ -18,8 +18,8 @@ static int compare_int_fast32_t_ptr(const void* a, const void* b)
 
 
 
-// given a pointer to an array of long*, reduce and update all the long
-// lower bound of -1 is assumend and does not have to be included
+// Given a pointer to an array of long*, reduce and update all the long.
+// Lower bound of -1 is assumend and does not have to be included
 static void reduce_worker(int_fast32_t* arr[], size_t length)
 {
     qsort(arr, length, sizeof(int_fast32_t*), compare_int_fast32_t_ptr);

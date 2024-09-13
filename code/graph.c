@@ -7,9 +7,10 @@
 
 
 
+// path_map either has to be a valid path map with the same dimensions as the graph, or NULL.
+// If it is NULL, it will be ignored and the graph will be printed without marking the path.
 void print_graph(Graph* const g, bool** path_map)
 {
-    printf("\n");
     const char* neighbor_symbol[] = {"·", "╶", "╴", "─", "╵", "└", "┘", "┴",
                                      "╷", "┌", "┐", "┬", "│", "├", "┤", "┼"};
 
