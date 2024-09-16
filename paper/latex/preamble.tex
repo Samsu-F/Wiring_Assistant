@@ -1,0 +1,89 @@
+%----------------------------------------------------------------------------------------
+%	Custom definitions and stuff
+%----------------------------------------------------------------------------------------
+
+\newcommand{\quotes}[1]{``#1''}
+\newcommand{\squotes}[1]{`#1'}
+
+
+\usepackage{tikz}
+\usepackage{mathtools}
+\usetikzlibrary{calc}
+\usetikzlibrary{backgrounds}
+\usepackage{multirow}
+
+\usepackage{amsmath}
+\usepackage{placeins} % for \FloatBarrier
+
+
+
+% green version
+\definecolor{color_circb_bg}{HTML}{053620}
+\definecolor{color_circb_grid}{HTML}{2d7454}
+\definecolor{color_circb_wire}{HTML}{88c441}
+\definecolor{color_circb_wire_highlight}{HTML}{00cfff}
+\definecolor{color_circb_metal}{HTML}{e2b677}
+% \definecolor{color_circb_metal}{HTML}{000000}
+\definecolor{color_marker_x}{HTML}{990099}
+% \definecolor{color_marker_y}{HTML}{500050}
+\colorlet{color_marker_y}{color_marker_x}
+\definecolor{color_x_coords}{HTML}{aa0000}
+\definecolor{color_y_coords}{HTML}{0000aa}
+\definecolor{color_bounds}{HTML}{006437}
+% \colorlet{color_bounds}{color_circb_bg}
+\definecolor{color_contrast1}{HTML}{D00000}
+\definecolor{color_contrast2}{HTML}{9d5aff}
+\definecolor{color_contrast3}{HTML}{CCCCCC}
+\definecolor{color_coordinate_labels}{HTML}{E0E0E0}
+\definecolor{color_small_difference}{HTML}{A0A0A0}
+% \definecolor{color_big_difference}{HTML}{000000}
+\colorlet{color_big_difference}{color_marker_x}
+
+
+\def\circbwirelinewidth{1mm}
+
+\def\circbwire[#1](#2,#3,#4,#5){
+    \draw[#1,line width=\circbwirelinewidth] (#2,#3) -- (#4,#5);
+    \fill[#1] (#2,#3) circle (1.5mm);
+    \fill[#1] (#4,#5) circle (1.5mm);
+    \begin{pgfonlayer}{metallayer}
+        \fill[color_circb_metal] (#2,#3) circle (1mm);
+        \fill[color_circb_metal] (#4,#5) circle (1mm);
+    \end{pgfonlayer}
+}
+
+
+\def\hdiffbracket[#1](#2,#3){
+    \draw[#1,line width=0.25mm] (#2+0.04,11)--(#2+0.04,11.15)--(#2+#3-0.04,11.15)--(#2+#3-0.04,11);
+    \node[#1] at (#2+#3/2,11.4) {$+#3$};
+}
+\def\vdiffbracket[#1](#2,#3){
+    \draw[#1,line width=0.25mm] (11,#2+0.04)--(11.15,#2+0.04)--(11.15,#2+#3-0.04)--(11,#2+#3-0.04);
+    \node[#1] at (11.48,#2+#3/2) {+#3};
+}
+
+\def\rowmarker(#1){
+    \fill[color_marker_y] (-1.2, #1-0.25) -- (-0.8, #1) -- (-1.2, #1+0.25) -- (-1.125, #1);
+}
+\def\colmarker(#1){
+    \fill[color_marker_y] (#1-0.25, -1.2) -- (#1, -0.8) -- (#1+0.25, -1.2) -- (#1, -1.125);
+}
+
+\def\circbmargin{.6}
+\def\circbcornerradius{1mm}
+
+\def\coordinatelabeloffset{-0.35}
+\def\coordinatelabelsize{\tiny}
+
+\newcommand{\todo}[1]{\textbf{\color{red}[TODO: #1]}}
+
+
+% complexity
+\newcommand{\bigO}{\mathcal{O}\hspace{-0.15em}}
+\newcommand{\logs}{\log(s)}
+\newcommand{\logw}{\log(w)}
+
+
+
+
+
