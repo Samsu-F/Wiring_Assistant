@@ -1,8 +1,6 @@
 %----------------------------------------------------------------------------------------
 %	TODO LIST
 %----------------------------------------------------------------------------------------
-% - Alle Vorkommen von "cable" durch "wire" ersetzen
-% - Will ich eine Final Slide?
 
 % DONE:
 % - Backup slide: Asymptotische Komplexität
@@ -96,10 +94,10 @@ University of Tübingen
 \newcommand{\footnotestar}[1]{%
     \begingroup
     \renewcommand{\thefootnote}{\fnsymbol{footnote}}%
-    \setcounter{footnote}{1}%
     \footnote{#1}%
     \endgroup
 }
+\setcounter{footnote}{1}%
 
 %----------------------------------------------------------------------------------------
 %	PRESENTATION SLIDES
@@ -111,7 +109,7 @@ University of Tübingen
 
 
 \maketitlepage
-\setcounter{framenumber}{0} % Exclude title page from framenumber count
+\setcounter{framenumber}{0} % Exclude title page from frame number count
 
 % \begin{frame}[t]{Overview}
 %     % Throughout your presentation, if you choose to use \section{} and \subsection{} commands, these will automatically be printed on this slide as an overview of your presentation
@@ -153,7 +151,7 @@ University of Tübingen
     \end{wrapfigure}
     \ % I have no idea why this solves the problem
     \begin{itemize}
-        \item Grid based circuit board
+        \item Grid-based circuit board
         \item Some existing wires
         \item Two points to connect
         \item Wires cannot be stacked
@@ -233,7 +231,7 @@ University of Tübingen
             \foreach \x in {0,1,2,3,4,5,6,7,8,9,10}
                 \foreach \y in {0,1,2,3,4,5,6,7,8,9,10}
                     \node<2->[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (\x,\y) {\texttt{0}};
-            % nodes with non-zero cost:
+            % nodes with a non-zero cost:
             \node<2->[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (5,0) {\texttt{1}};
             \node<2->[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (5,1) {\texttt{1}};
             \node<2->[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (5,2) {\texttt{1}};
@@ -312,7 +310,7 @@ University of Tübingen
             \foreach \x in {0,1,2,3,4,5,6,7,8,9,10}
                 \foreach \y in {0,1,2,3,4,5,6,7,8,9,10}
                     \node[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (\x,\y) {\texttt{0}};
-            % nodes with non-zero cost:
+            % nodes with a non-zero cost:
             \node[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (5,0) {\texttt{1}};
             \node[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (5,1) {\texttt{1}};
             \node[circle,draw, minimum size=2mm, inner sep=0pt, fill=white] at (5,2) {\texttt{1}};
@@ -796,7 +794,7 @@ University of Tübingen
 
 
 
-\begin{frame}{Complexity}
+\begin{frame}{Complexity (simplified\footnotestar{see the paper for the exact complexities})}
     For grid size $s$ and number of wires $m$:\\
     {\footnotesize(Ignoring the $\mathrm{log}(s)$-factor for growing number of digits)\\}
 
@@ -815,7 +813,7 @@ University of Tübingen
         % \caption{Complexity}
         % \label{tab:table_complexity}
     \end{table}
-    Basically indepentent of input grid size $s$!
+    Basically independent of input grid size $s$!
 \end{frame}
 
 
@@ -831,20 +829,6 @@ University of Tübingen
             \draw[step=1.0,color_circb_grid,line width=0.1mm] (0,0) grid (40,40);
             \pgfdeclarelayer{metallayer}
             \pgfsetlayers{main,metallayer}
-            % \circbwire<1->[color_circb_wire](3,5,35,5)
-            % \circbwire<1->[color_circb_wire](5,3,5,37)
-            % \circbwire<1->[color_circb_wire](1,35,37,35)
-            % \circbwire<1->[color_circb_wire](33,1,33,39)
-            % \circbwire<1->[color_circb_wire](9,11,29,11)
-            % \circbwire<1->[color_circb_wire](7,29,31,29)
-            % \circbwire<1->[color_circb_wire](11,9,11,31)
-            % \circbwire<1->[color_circb_wire](27,7,27,33)
-            % \circbwire<1->[color_circb_wire](15,17,23,17)
-            % \circbwire<1->[color_circb_wire](13,23,25,23)
-            % \circbwire<1->[color_circb_wire](17,15,17,25)
-            % \circbwire<1->[color_circb_wire](21,13,21,27)
-            % the points to connect
-
             \draw[color_circb_wire, line cap=round, line width=0.8mm](3,5) -- (35,5);
             \draw[color_circb_wire, line cap=round, line width=0.8mm](5,3) -- (5,37);
             \draw[color_circb_wire, line cap=round, line width=0.8mm](1,35) -- (37,35);
