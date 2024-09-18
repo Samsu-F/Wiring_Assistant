@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <time.h>
 #include <inttypes.h>
 

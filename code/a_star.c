@@ -29,7 +29,8 @@ static bool cheaper_path(const PathMetric a, const PathMetric b)
     uint32_t metric_a = a.length | ((uint32_t)a.intersections << (sizeof(a.length) * CHAR_BIT));
     uint32_t metric_b = b.length | ((uint32_t)b.intersections << (sizeof(b.length) * CHAR_BIT));
     // guaranteed to be true as long as nothing is changed, but this might catch a mistake if the types are changed
-    static_assert(sizeof(metric_a) >= sizeof(a.intersections) + sizeof(a.length));
+    static_assert(sizeof(metric_a) >= sizeof(a.intersections) + sizeof(a.length),
+                  "size of metric insufficient to contain tuple of intersections and length");
     return metric_a < metric_b;
 }
 
@@ -39,7 +40,7 @@ static bool cheaper_path(const PathMetric a, const PathMetric b)
 // must be freed using free_matrix [see below].
 static void** new_matrix(const size_t width, const size_t height, const uint8_t init_byte_value, size_t sizeoftype)
 {
-    static_assert(sizeof(void*) == sizeof(void**)); // you would have to use a very strange system for this to fail, but the C standard does not guarantee it
+    static_assert(sizeof(void*) == sizeof(void**), ""); // you would have to use a very strange system for this to fail, but the C standard does not guarantee it
     void** matrix = malloc(width * sizeof(void*));
     if(!matrix) {
         return NULL;
@@ -70,7 +71,7 @@ static void free_matrix(void** matrix)
 // Caller is responsible for freeing the table again with free_scores_table [see below].
 static PathMetric** new_scores_table(const size_t width, const size_t height, const uint8_t init_byte_value)
 {
-    static_assert((sizeof(PathMetric**) == sizeof(void*)) && (sizeof(PathMetric*) == sizeof(void*)));
+    static_assert((sizeof(PathMetric**) == sizeof(void*)) && (sizeof(PathMetric*) == sizeof(void*)), "");
     return (PathMetric**)new_matrix(width, height, init_byte_value, sizeof(PathMetric));
 }
 // wrapper function, free a scores table that was allocated by new_scores_table and all of its internal allocations
@@ -87,7 +88,7 @@ static void free_scores_table(PathMetric** scores)
 // Caller is responsible for freeing the table again with free_predecessor_table [see below].
 static Uint16Point** new_predecessor_table(const size_t width, const size_t height, const uint8_t init_byte_value)
 {
-    static_assert((sizeof(Uint16Point**) == sizeof(void*)) && (sizeof(Uint16Point*) == sizeof(void*)));
+    static_assert((sizeof(Uint16Point**) == sizeof(void*)) && (sizeof(Uint16Point*) == sizeof(void*)), "");
     return (Uint16Point**)new_matrix(width, height, init_byte_value, sizeof(Uint16Point));
 }
 // wrapper function
@@ -102,7 +103,7 @@ static void free_predecessor_table(Uint16Point** pred_tbl)
 // wrapper function
 bool** new_path_map(const size_t width, const size_t height)
 {
-    static_assert((sizeof(bool**) == sizeof(void*)) && (sizeof(bool*) == sizeof(void*)));
+    static_assert((sizeof(bool**) == sizeof(void*)) && (sizeof(bool*) == sizeof(void*)), "");
     return (bool**)new_matrix(width, height, (const uint8_t) false, sizeof(bool));
 }
 // wrapper function
