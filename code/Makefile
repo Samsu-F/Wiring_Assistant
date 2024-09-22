@@ -10,7 +10,7 @@ SANITIZE_FLAGS = -fanalyzer -fsanitize=address -fsanitize=undefined -fsanitize=l
 
 
 
-# The name of theb build directory
+# The name of the build directory
 BUILD_DIR = build
 
 # Target executable
@@ -57,4 +57,4 @@ clean:
 	@rmdir --ignore-fail-on-non-empty $(BUILD_DIR) 2>/dev/null || true
 
 # Phony targets
-.PHONY: all clean pedantic
+.PHONY: all clean pedantic sanitize
